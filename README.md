@@ -27,5 +27,3 @@ npm run dev
 ```sh
 npm run build
 ```
-# race-id-testing
-# race-id-testing
