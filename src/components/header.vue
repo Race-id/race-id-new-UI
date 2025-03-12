@@ -1,173 +1,143 @@
 <template>
-  <header>
-    <div class="top-header">
-      <div class="top-container">
-        <router-link to="/" class="logo">Race.id</router-link>
-        <div class="tagline">We provide running information for you.</div>
-        <div class="profile-menu">
-          
-        </div>
+  <div class="depth-frame">
+    <div class="depth-frame-wrapper">
+      <div class="div-wrapper">
+        <div class="text-wrapper">Race.id</div>
       </div>
     </div>
 
+    <div class="div">
+      <div class="div-2">
+        <div class="div-wrapper">
+          <div class="text-wrapper-2">Home</div>
+        </div>
 
-    <div class="nav-container">
-      <nav class="nav-menu">
-        <ul>
-      <li><router-link to="/">Home</router-link></li>
-      <li><router-link to="/race">Race</router-link></li>
-      <!-- <li><router-link to="/articles">Articles</router-link></li> -->
-      <!-- <li><router-link to="/equipment">Equipment</router-link></li>  -->
-      <li><router-link to="/faq">FAQ</router-link></li>
-      <li><router-link to="/about-us">About Us</router-link></li>
-        </ul>
-      </nav>
+        <div class="div-wrapper">
+          <div class="text-wrapper-2">Race</div>
+        </div>
+
+        <div class="div-wrapper">
+          <div class="text-wrapper-2">FAQ</div>
+        </div>
+
+        <div class="div-wrapper">
+          <div class="text-wrapper-3">About Us</div>
+        </div>
+
+        <div class="div-3" />
+
+        <div class="div-4" />
+      </div>
     </div>
-  </header>
+  </div>
 </template>
 
 <script>
 export default {
-  name: 'Header',
-  }
+  name: "DepthFrame",
+};
 </script>
 
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
-
-header {
-  font-family: 'Poppins', sans-serif;
-}
-
-footer {
-  font-family: 'Poppins', sans-serif;
-}
-.top-header {
-  background: linear-gradient(to right, #283f95, #2252a4, #1c61b0, #127cc7, #0993d9, #04a3e6) !important;
-  color: #fff;    
-  padding: 10px 0;
-}
-
-.top-container {
-  max-width: 1200px;
-  margin: 0 auto;
+<style>
+.depth-frame {
+  align-items: center;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  border-color: #e5e8ea;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-}
-
-.logo {
-  font-size: 1.5em;
-  font-weight: bold;
-  color: #fff;
-  text-decoration: none;
-}
-
-.tagline {
-  font-size: 0.9em;
-  color: #fff;
-}
-
-.profile-menu {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-header {
+  padding: 12px 40px;
   position: sticky;
   top: 0;
-  width: 100%;
-  z-index: 1000;
+  z-index: 100;
+  background-color: #fff;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-.nav-container {
-  background: #fff;
-  padding: 15px 0;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.nav-menu {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
+.depth-frame .depth-frame-wrapper {
   align-items: center;
-  padding: 0 20px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 16px;
+  position: relative;
 }
 
-.nav-menu ul {
-  list-style: none;
+.depth-frame .div-wrapper {
+  align-items: flex-start;
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  position: relative;
+}
+
+.depth-frame .text-wrapper {
+  align-self: stretch;
+  color: #111416;
+  font-family: "Lexend-Bold", Helvetica;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 23px;
+  margin-top: -1.00px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.depth-frame .div {
+  align-items: flex-start;
   display: flex;
-  gap: 30px;
-  margin: 0;
-  padding: 0;
+  flex: 1;
+  flex-grow: 1;
+  gap: 32px;
+  justify-content: flex-end;
+  position: relative;
 }
 
-.nav-menu a {
-  color: #333;
-  text-decoration: none;
+.depth-frame .div-2 {
+  align-items: center;
+  display: flex;
+  gap: 66px;
+  height: 40px;
+  position: relative;
+  width: 372px;
+}
+
+.depth-frame .text-wrapper-2 {
+  align-self: stretch;
+  color: #111416;
+  font-family: "Lexend-Medium", Helvetica;
+  font-size: 14px;
   font-weight: 500;
-  transition: color 0.3s ease;
+  letter-spacing: 0;
+  line-height: 21px;
+  margin-top: -1.00px;
+  position: relative;
+  white-space: nowrap;
 }
 
-.nav-menu a:hover {
-  color: #ff4d4d;
+.depth-frame .text-wrapper-3 {
+  align-self: stretch;
+  color: #111416;
+  font-family: "Lexend-Medium", Helvetica;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 21px;
+  margin-top: -1.00px;
+  position: relative;
 }
 
-.divider {
-  text-align: center;
-  color: #666;
-  margin: 5px 0;
+.depth-frame .div-3 {
+  flex: 0 0 auto;
+  margin-right: -145.00px;
+  position: relative;
 }
 
-@media only screen and (max-width: 600px) {
-  .top-container {
-    flex-direction: row;
-    justify-content: flex-start;
-    padding: 10px;
-    position: relative;
-  }
-
-  .logo {
-    font-size: 1.3em;
-    margin-right: 10px;
-  }
-
-  .tagline {
-    font-size: 0.8em;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  .nav-container {
-    padding: 8px 0;
-    overflow-x: auto;
-    margin-bottom: 10px;
-  }
-
-  .nav-menu {
-    padding: 0 10px;
-  }
-
-  .nav-menu ul {
-    flex-direction: row;
-    gap: 15px;
-    width: max-content;
-    padding: 0 10px;
-  }
-
-  .nav-menu li {
-    width: auto;
-  }
-
-  .nav-menu a {
-    white-space: nowrap;
-    padding: 8px 12px;
-  }
+.depth-frame .div-4 {
+  flex: 0 0 auto;
+  margin-right: -273.00px;
+  position: relative;
 }
-
-
 </style>
