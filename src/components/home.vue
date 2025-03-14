@@ -15,8 +15,70 @@ const nextImage = () => {
   currentImageIndex.value = (currentImageIndex.value + 1) % images.value.length;
 };
 
+const reviews = ref ([
+  {
+    id: 1,
+    name: "Michael Andalas",
+    event: "Borobudur Marathon 2023",
+    image: "/images/Man 1.jpg",
+    text: "Great experience using Race.id! Found my perfect marathon and the registration process was smooth."
+  },
+  {
+   id: 2,
+   name: "Johnny Wibawa",
+   event: "Jakarta Run Festival 2024",
+   image: "/images/Man 2.jpg",
+   text: "This website is a great platform for marathon runners! The user-friendly interface makes it easy to navigate."
+  },
+  {
+    id: 3, 
+    name: "Charlotte Lestari",
+    event: "Padma Run 2023",
+    image: "/images/Woman 1.jpg",
+    text: "I love using Race.id! It's my go-to platform for finding and registering for marathons. The website is user-friendly!"
+  },
+  {
+    id: 4,
+    name: "Sarah Kusuma",
+    event: "Pocari Sweat Run 2024",
+    image: "/images/Woman 2.jpg",
+    text: "An excellent marathon website! The registration process is quick and hassle-free."
+  },
+  {
+    id: 5,
+    name: "David Chen",
+    event: "Bali Beach Run 2024",
+    image: "/images/Man 3.jpg",
+    text: "I've been using Race.id for years, and it's been a game-changer for me. The website is user-friendly, and I've found some amazing marathons through it."
+  },
+  {
+    id: 6,
+    name: "Jessica Lim",
+    event: "Jakarta City Run 2025",
+    image: "/images/Woman 3.png",
+    text: "Fantastic marathon website! The design is clean and easy to navigate, making registration a breeze. I especially love the live race tracking and the motivational training guides. It’s a great resource for both first-time runners and seasoned athletes. Highly recommended!"
+  }
+]);
+
+const currentReviewIndex = ref(0);
+const isReviewPaused = ref(false);
+
+const nextReview = () => {
+  if (!isReviewPaused.value) {
+    if (currentReviewIndex.value === reviews.value.length - 1) {
+      // Reset to first review with smooth transition
+      setTimeout(() => {
+        currentReviewIndex.value = 0;
+      }, 500);
+    } else {
+      currentReviewIndex.value++;
+    }
+  }
+};
+
 onMounted(() => {
   setInterval(nextImage, 4000);
+  setInterval(nextReview, 5000);
 });
 </script>
 
@@ -43,6 +105,31 @@ onMounted(() => {
       </div>
       </section>
 
+      <!-- How It Works -->
+        <section class="how-it-works">
+    <header class="section-header">
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-description">Three simple steps to join a race</p>
+    </header>
+    <div class="steps-container">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Find Your Race</h3>
+        <p>Browse through our curated list of running events</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Register & Pay</h3>
+        <p>Quick and secure registration process</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Run & Track</h3>
+        <p>Get your kit and track your race progress</p>
+      </div>
+    </div>
+  </section>
+
        <!-- Sorting by place -->
       <section class="place-section">
         <header class="section-header">
@@ -54,8 +141,8 @@ onMounted(() => {
           <h3 class="place-title">Jakarta</h3>
         </div>
         <div class="place-box">
-          <img src="/images/Surabaya.jpg" alt="Place 3" class="place-image">
-          <h3 class="place-title">Surabaya</h3>
+          <img src="/images/Bandung.jpg" alt="Place 3" class="place-image">
+          <h3 class="place-title">Bandung</h3>
         </div>
         <div class="place-box">
           <img src="/images/Bali.jpg" alt="Place 4" class="place-image">
@@ -180,41 +267,42 @@ onMounted(() => {
           <p class="section-description">Hear from our community</p>
         </header>
         
-        <div class="review-cards">
-    <article class="review-card">
-      <div class="reviewer-info">
-        <img src="/images/Man 1.jpg" alt="Runner 1" class="reviewer-avatar">
-        <div class="reviewer-details">
-          <h3 class="reviewer-name">Michael Andalas</h3>
-          <p class="reviewer-location">Borobudur Marathon 2023</p>
-        </div>
+          <div class="review-slider" 
+        @mouseenter="isReviewPaused = true"
+        @mouseleave="isReviewPaused = false"
+        @touchstart="isReviewPaused = true"
+        @touchend="isReviewPaused = false">
+      <div class="review-cards" 
+          :style="{ transform: `translateX(-${currentReviewIndex * 33.33}%)` }">
+        <article v-for="review in reviews" 
+                :key="review.id" 
+                class="review-card">
+          <div class="reviewer-info">
+            <img :src="review.image" :alt="review.name" class="reviewer-avatar">
+            <div class="reviewer-details">
+              <h3 class="reviewer-name">{{ review.name }}</h3>
+              <p class="reviewer-location">{{ review.event }}</p>
+            </div>
+          </div>
+          <p class="review-text">"{{ review.text }}"</p>
+        </article>
       </div>
-      <p class="review-text">"Great experience using Race.id! Found my perfect marathon and the registration process was smooth."</p>
-    </article>
-
-    <article class="review-card">
-      <div class="reviewer-info">
-        <img src="/images/Man 2.jpg" alt="Runner 1" class="reviewer-avatar">
-        <div class="reviewer-details">
-          <h3 class="reviewer-name">Johnny Wibawa</h3>
-          <p class="reviewer-location">Jakarta Run Festival 2024</p>
-        </div>
-      </div>
-      <p class="review-text">"This website is a great platform for marathon runners! The user-friendly interface makes it easy to navigate, and the live tracking feature is a game-changer."</p>
-    </article>
-
-    <article class="review-card">
-      <div class="reviewer-info">
-        <img src="/images/Woman 1.jpg" alt="Runner 1" class="reviewer-avatar">
-        <div class="reviewer-details">
-          <h3 class="reviewer-name">Charlotte Lestari</h3>
-          <p class="reviewer-location">Padma Run 2023</p>
-        </div>
-      </div>
-      <p class="review-text">"An excellent marathon website! The registration process is quick and hassle-free, and the event details are well-organized."</p>
-    </article>
     </div>
       </section>
+
+        <!-- Newsletter Section -->
+  <section class="newsletter-section">
+    <div class="newsletter-container">
+      <div class="newsletter-content">
+        <h2 class="newsletter-title">Get Updates on Latest Races</h2>
+        <p class="newsletter-description">Subscribe to our newsletter and never miss any running events</p>
+        <div class="newsletter-form">
+          <input type="email" placeholder="Enter your email" class="newsletter-input">
+          <button class="newsletter-button">Subscribe</button>
+        </div>
+      </div>
+    </div>
+  </section>
     </main>
     <Footer />
   </template>
@@ -321,6 +409,59 @@ onMounted(() => {
     background: #283f95;
   }
 
+    /* How It Works Section */
+  .how-it-works {
+    padding: 40px 16px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin: 16px;
+  }
+
+  .steps-container {
+    display: flex;
+    gap: 24px;
+    margin-top: 32px;
+    justify-content: center;
+  }
+
+  .step-card {
+    flex: 1;
+    max-width: 320px;
+    text-align: center;
+    padding: 24px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .step-icon {
+    width: 48px;
+    height: 48px;
+    background: #04a3e6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .step-title {
+    color: #141414;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .step-description {
+    color: #3d4d5c;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+
   /* Place section */
     .place-section {
     padding: 40px 16px;
@@ -363,7 +504,6 @@ onMounted(() => {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
-  
   /* Events Section */
   .events-section {
     padding: 40px 16px;
@@ -496,16 +636,25 @@ onMounted(() => {
   background-color: #f8f9fa;
   margin: 40px 0;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.review-slider {
+  position: relative;
+  overflow: hidden;
+  padding: 20px 0;
 }
 
 .review-cards {
   display: flex;
+  transition: transform 0.5s ease;
   gap: 24px;
   margin-top: 32px;
 }
 
 .review-card {
-  flex: 1;
+  flex: 0 0 calc(33.33% - 16px);
+  min-width: calc(33.33% - 16px);
   background: white;
   padding: 24px;
   border-radius: 12px;
@@ -550,6 +699,110 @@ onMounted(() => {
   color: #141414;
   margin: 0;
 }
+
+/* Newsletter Section */
+.newsletter-section {
+  padding: 40px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.newsletter-container {
+  width: 844.67px;
+  height: 235.33px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #E5E7EB;
+  position: relative;
+  overflow: hidden;
+}
+
+.newsletter-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #04a3e6, #283f95);
+}
+
+.newsletter-title {
+  color: #3d4d5c;
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  position: relative;
+  display: inline-block;
+}
+
+.newsletter-title {
+  color: #141414;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.newsletter-content {
+  text-align: center;
+  max-width: 600px;
+}
+
+.newsletter-description {
+  color: #3d4d5c;
+  font-size: 16px;
+  margin-bottom: 24px;
+}
+
+.newsletter-form {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.newsletter-input {
+  width: 320px;
+  height: 48px;
+  padding: 0 16px;
+  border: 2px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 16px;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.newsletter-input:hover {
+  border-color: #D1D5DB;
+}
+
+.newsletter-input:focus {
+  outline: none;
+  border-color: #04a3e6;
+}
+
+.newsletter-button {
+  height: 48px;
+  padding: 0 32px;
+  background: #04a3e6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(4, 163, 230, 0.2);
+}
+
+.newsletter-button:hover {
+  background: #283f95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 163, 149, 0.2);
+}
   
   /* Responsive Styles */
   @media (max-width: 991px) {
@@ -573,8 +826,8 @@ onMounted(() => {
     }
 
     .review-cards {
-      flex-direction: column;
-      gap: 16px;
+      flex: 0 0 calc(50% - 12px);
+      min-width: calc(50% - 12px);
     }
   }
   
@@ -625,6 +878,57 @@ onMounted(() => {
       padding: 24px 16px;
       margin: 24px 0;
     }
+
+      .newsletter-section {
+      padding: 32px 16px;
+    }
+
+    .newsletter-form {
+      flex-direction: column;
+    }
+
+    .newsletter-input {
+      width: 100%;
+    }
+
+    .review-card {
+      flex: 0 0 100%;
+      min-width: 100%
+    }
   }
+
+  @media (max-width: 880px) {
+  .newsletter-container {
+    width: 100%;
+    height: auto;
+    padding: 32px 24px;
+  }
+
+  .newsletter-form {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .newsletter-input {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .newsletter-button {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  @media (max-width: 768px) {
+  .steps-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .step-card {
+    width: 100%;
+  }
+}
+}
   </style>
 

@@ -1,112 +1,182 @@
 <template>
-  <div class="footer">
-    <div class="footer-content">
-      <!-- Simple Brand Section -->
-      <div class="brand">
-        <span class="brand-name">Race.id</span>
-        <div class="brand-motto">Run Together 🏃‍♂️</div>
+  <footer class="footer">
+    <div class="footer-wrapper">
+      <!-- Main Footer -->
+      <div class="footer-main">
+        <!-- Logo Section -->
+        <div class="footer-brand">
+          <h2 class="brand-logo">Race.id</h2>
+          <p class="brand-tagline">Discover Your Next Running Adventure</p>
+          <div class="social-links">
+            <a href="#" class="social-icon">Instagram</a>
+            <a href="#" class="social-icon">Twitter</a>
+            <a href="#" class="social-icon">Facebook</a>
+          </div>
+        </div>
+
+        <!-- Links Grid -->
+        <div class="footer-grid">
+          <div class="footer-column">
+            <h3>Events</h3>
+            <ul>
+              <li><a href="#">Upcoming Races</a></li>
+              <li><a href="#">Past Events</a></li>
+              <li><a href="#">Virtual Runs</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h3>Support</h3>
+            <ul>
+              <li><a href="#">Contact Us</a></li>
+              <li><a href="#">FAQ</a></li>
+              <li><a href="#">Help Center</a></li>
+            </ul>
+          </div>
+        </div>
       </div>
 
-      <!-- Clean Navigation -->
-      <div class="nav-grid">
-        <a href="#" class="nav-item">Events</a>
-        <a href="#" class="nav-item">Routes</a>
-        <a href="#" class="nav-item">Community</a>
-        <a href="#" class="nav-item">Stories</a>
+      <!-- Footer Bottom -->
+      <div class="footer-bottom">
+        <p class="copyright">© 2025 Race.id All rights reserved.</p>
+        </div>
       </div>
-
-    </div>
-  </div>
+  </footer>
 </template>
 
 <style scoped>
 .footer {
-  background: linear-gradient(to right, #283f95, #04a3e6);
-  padding: 40px 20px;
+  background: #ffffff;
+  padding: 64px 24px 24px;
+  border-top: 2px solid #f3f4f6;
+  font-family: "Plus Jakarta Sans", sans-serif;
 }
 
-.footer-content {
-  max-width: 1000px;
+.footer-wrapper {
+  max-width: 1280px;
   margin: 0 auto;
+}
+
+.footer-main {
+  display: grid;
+  grid-template-columns: 1.5fr 2fr;
+  gap: 64px;
+  margin-bottom: 48px;
+}
+
+.footer-brand {
+  padding-right: 48px;
+}
+
+.brand-logo {
+  color: #04a3e6;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 16px;
+}
+
+.brand-tagline {
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.social-links {
+  display: flex;
+  gap: 16px;
+}
+
+.social-icon {
+  color: #04a3e6;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.social-icon:hover {
+  opacity: 0.8;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px;
+}
+
+.footer-column h3 {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.footer-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-column li {
+  margin-bottom: 12px;
+}
+
+.footer-column a {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.footer-column a:hover {
+  color: #04a3e6;
+}
+
+.footer-bottom {
+  padding-top: 24px;
+  border-top: 1px solid #f3f4f6;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
 }
 
-.brand {
-  text-align: left;
-}
-
-.brand-name {
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: 1px;
-}
-
-.brand-motto {
-  margin-top: 8px;
+.copyright {
+  color: #6b7280;
   font-size: 14px;
-  opacity: 0.9;
-}
-
-.nav-grid {
-  display: flex;
-  gap: 32px;
-}
-
-.nav-item {
-  color: white;
-  text-decoration: none;
-  font-size: 16px;
-  position: relative;
-}
-
-.nav-item::after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -4px;
-  left: 0;
-  background: white;
-  transition: width 0.3s ease;
-}
-
-.nav-item:hover::after {
-  width: 100%;
-}
-
-.social {
-  display: flex;
-  gap: 20px;
-}
-
-.social-link {
-  color: white;
-  text-decoration: none;
-  font-size: 16px;
-  padding: 8px 12px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
-}
-
-.social-link:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  margin: 0;
 }
 
 @media (max-width: 768px) {
-  .footer-content {
-    flex-direction: column;
-    gap: 30px;
+  .footer-main {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+
+  .footer-brand {
+    padding-right: 0;
     text-align: center;
   }
 
-  .nav-grid {
-    flex-wrap: wrap;
+  .social-links {
     justify-content: center;
+  }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
   }
 }
 </style>
