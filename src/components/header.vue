@@ -2,31 +2,27 @@
   <div class="depth-frame">
     <div class="depth-frame-wrapper">
       <div class="div-wrapper">
-        <div class="text-wrapper">Race.id</div>
+        <router-link to="/" class="logo">Race.id</router-link>
       </div>
     </div>
 
     <div class="div">
       <div class="div-2">
         <div class="div-wrapper">
-          <div class="text-wrapper-2">Home</div>
+          <router-link to="/" class="nav-link">Home</router-link>
         </div>
 
         <div class="div-wrapper">
-          <div class="text-wrapper-2">Race</div>
+          <router-link to="/race" class="nav-link">Race</router-link>
         </div>
 
         <div class="div-wrapper">
-          <div class="text-wrapper-2">FAQ</div>
+          <router-link to="/faq" class="nav-link">FAQ</router-link>
         </div>
 
         <div class="div-wrapper">
-          <div class="text-wrapper-3">About Us</div>
+          <router-link to="/about-us" class="nav-link">About</router-link>
         </div>
-
-        <div class="div-3" />
-
-        <div class="div-4" />
       </div>
     </div>
   </div>
@@ -54,6 +50,25 @@ export default {
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.depth-frame router-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.text-wrapper,
+.text-wrapper-2,
+.text-wrapper-3 {
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.text-wrapper:hover,
+.text-wrapper-2:hover, 
+.text-wrapper-3:hover {
+  color: #04a3e6;
 }
 
 .depth-frame .depth-frame-wrapper {
@@ -139,5 +154,82 @@ export default {
   flex: 0 0 auto;
   margin-right: -273.00px;
   position: relative;
+}
+
+.logo {
+  color: #111416;
+  font-family: "Lexend-Bold", Helvetica;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  line-height: 23px;
+}
+
+.nav-link {
+  color: #111416;
+  font-family: "Lexend-Medium", Helvetica;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  line-height: 21px;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: #04a3e6;
+}
+
+@media (max-width: 768px) {
+  .depth-frame {
+    padding: 12px 24px;
+  }
+
+  .logo-wrapper {
+    padding-right: 24px;
+  }
+
+  .nav-menu {
+    gap: 24px;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .nav-link {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .depth-frame {
+    padding: 10px 16px;
+  }
+
+  .logo-wrapper {
+    padding-right: 16px;
+  }
+
+  .nav-menu {
+    gap: 16px;
+  }
+
+  .nav-link {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .logo-wrapper {
+    padding-right: 12px;
+  }
+
+  .nav-menu {
+    gap: 12px;
+  }
+
+  .nav-link {
+    font-size: 11px;
+  }
 }
 </style>

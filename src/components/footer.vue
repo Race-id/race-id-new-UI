@@ -1,3 +1,11 @@
+<script setup>
+import { computed } from 'vue';
+
+const currentYear = computed(() => {
+  return new Date().getFullYear();
+})
+</script>
+
 <template>
   <footer class="footer">
     <div class="footer-wrapper">
@@ -7,12 +15,7 @@
         <div class="footer-brand">
           <h2 class="brand-logo">Race.id</h2>
           <p class="brand-tagline">Discover Your Next Running Adventure</p>
-          <div class="social-links">
-            <a href="#" class="social-icon">Instagram</a>
-            <a href="#" class="social-icon">Twitter</a>
-            <a href="#" class="social-icon">Facebook</a>
           </div>
-        </div>
 
         <!-- Links Grid -->
         <div class="footer-grid">
@@ -38,7 +41,7 @@
 
       <!-- Footer Bottom -->
       <div class="footer-bottom">
-        <p class="copyright">© 2025 Race.id All rights reserved.</p>
+        <p class="copyright">© {{ currentYear }} Race.id All rights reserved.</p>
         </div>
       </div>
   </footer>
@@ -80,23 +83,6 @@
   font-size: 15px;
   line-height: 1.5;
   margin-bottom: 24px;
-}
-
-.social-links {
-  display: flex;
-  gap: 16px;
-}
-
-.social-icon {
-  color: #04a3e6;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: opacity 0.2s ease;
-}
-
-.social-icon:hover {
-  opacity: 0.8;
 }
 
 .footer-grid {
@@ -158,10 +144,6 @@
     text-align: center;
   }
 
-  .social-links {
-    justify-content: center;
-  }
-
   .footer-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -173,10 +155,86 @@
   }
 }
 
+@media (max-width: 768px) {
+  .footer {
+    padding: 40px 16px 24px;
+  }
+
+  .footer-main {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-bottom: 32px;
+  }
+
+  .footer-brand {
+    padding-right: 0;
+    text-align: center;
+  }
+
+  .brand-logo {
+    font-size: 24px;
+    margin: 0 0 12px;
+  }
+
+  .brand-tagline {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .footer-column h3 {
+    font-size: 15px;
+    margin: 0 0 16px;
+  }
+
+  .footer-column li {
+    margin-bottom: 10px;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    padding-top: 20px;
+  }
+}
+
 @media (max-width: 480px) {
+  .footer {
+    padding: 32px 16px 20px;
+  }
+
   .footer-grid {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 32px;
+  }
+
+  .footer-column {
+    padding: 0 16px;
+  }
+
+  .footer-column h3 {
+    font-size: 16px;
+  }
+
+  .footer-column ul {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .footer-column li {
+    margin-bottom: 0;
+  }
+
+  .brand-tagline {
+    padding: 0 16px;
   }
 }
 </style>
