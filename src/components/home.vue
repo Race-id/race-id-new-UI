@@ -1,7 +1,7 @@
 <script setup>
 import Header from "@/components/header.vue";
 import Footer from "@/components/footer.vue";
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 const images = ref([
   '/images/Hero banner 1.jpg',
@@ -62,23 +62,26 @@ const reviews = ref ([
 
 const currentReviewIndex = ref(0);
 const isReviewPaused = ref(false);
+const extendedReviews = computed(() => {
+  return [...reviews.value, ...reviews.value.slice(0, 3)]; 
+});
 
 const nextReview = () => {
   if (!isReviewPaused.value) {
-    if (currentReviewIndex.value === reviews.value.length - 1) {
-      // Reset to first review with smooth transition
-      setTimeout(() => {
-        currentReviewIndex.value = 0;
-      }, 500);
+    if (currentReviewIndex.value >= reviews.value.length - 1) {
+      isTransitioning.value = true;
+      currentReviewIndex.value = 0;
     } else {
       currentReviewIndex.value++;
     }
   }
 };
 
+const isTransitioning = ref(false);
+
 onMounted(() => {
   setInterval(nextImage, 4000);
-  setInterval(nextReview, 5000);
+  setInterval(nextReview, 3000);
 });
 </script>
 
@@ -267,26 +270,28 @@ onMounted(() => {
           <p class="section-description">Hear from our community</p>
         </header>
         
-          <div class="review-slider" 
-        @mouseenter="isReviewPaused = true"
-        @mouseleave="isReviewPaused = false"
-        @touchstart="isReviewPaused = true"
-        @touchend="isReviewPaused = false">
-      <div class="review-cards" 
-          :style="{ transform: `translateX(-${currentReviewIndex * 33.33}%)` }">
-        <article v-for="review in reviews" 
-                :key="review.id" 
-                class="review-card">
-          <div class="reviewer-info">
-            <img :src="review.image" :alt="review.name" class="reviewer-avatar">
-            <div class="reviewer-details">
-              <h3 class="reviewer-name">{{ review.name }}</h3>
-              <p class="reviewer-location">{{ review.event }}</p>
-            </div>
+        <div class="review-slider" 
+       @mouseenter="isReviewPaused = true"
+       @mouseleave="isReviewPaused = false"
+       @touchstart="isReviewPaused = true"
+       @touchend="isReviewPaused = false">
+    <div class="review-cards" 
+         :class="{ 'no-transition': isTransitioning }"
+         :style="{ transform: `translateX(-${currentReviewIndex * 33.33}%)` }"
+         @transitionend="isTransitioning = false">
+      <article v-for="review in extendedReviews" 
+               :key="`${review.id}-${review.name}`"
+               class="review-card">
+        <div class="reviewer-info">
+          <img :src="review.image" :alt="review.name" class="reviewer-avatar">
+          <div class="reviewer-details">
+            <h3 class="reviewer-name">{{ review.name }}</h3>
+            <p class="reviewer-location">{{ review.event }}</p>
           </div>
-          <p class="review-text">"{{ review.text }}"</p>
-        </article>
-      </div>
+        </div>
+        <p class="review-text">"{{ review.text }}"</p>
+      </article>
+    </div>
     </div>
       </section>
 
@@ -650,6 +655,14 @@ onMounted(() => {
   transition: transform 0.5s ease;
   gap: 24px;
   margin-top: 32px;
+}
+
+.review-cards.no-transition {
+  transition: none;
+}
+
+.review-cards.resetting {
+  transition: none;
 }
 
 .review-card {
