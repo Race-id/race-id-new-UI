@@ -5,6 +5,8 @@ import Articles from '../components/articles.vue'
 import Equipment from '../components/equipment.vue'
 import FAQ from '../components/faq.vue'
 import AboutUs from '../components/about-us.vue'
+import UpcomingEvents from '@/components/upcoming-events.vue'
+import PastEvents from '@/components/past-events.vue'
 
 const routes = [
   {
@@ -22,6 +24,16 @@ const routes = [
     meta: {
       title: 'Race.id - Race'
     }
+  },
+  {
+    path: '/upcoming-events',
+    name: 'UpcomingEvents',
+    component: UpcomingEvents
+  },
+  {
+    path: '/past-events',
+    name: 'PastEvents',
+    component: PastEvents
   },
   {
     path: '/articles',

@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
-import { useRouter } from 'vue-router'
 
 // State management
 const searchQuery = ref('')
@@ -11,18 +10,10 @@ const selectedDate = ref('')
 const selectedProvince = ref('')
 const isLoading = ref(true)
 const error = ref (null)
-const router = useRouter()
 
-const goToUpcomingEvents = () => {
-  router.push('/upcoming-events')
-}
-
-const goToPastEvents = () => {
-  router.push('/past-events')
-}
-
+const currentPage = ref(1)
+const itemsPerPage = 12
 const races = ref([])
-const pastRaces = ref([])
 
 // Fetch races from API
 const fetchRaces = async () => {
@@ -43,21 +34,11 @@ const fetchRaces = async () => {
     // Memisahkan races berdasarkan evnhStartDate
     const currentDate = new Date()
     const upcoming = []
-    const past = []
 
     racesList.forEach(race => {
       const raceDate = new Date(race.evnhStartDate)
       if (raceDate >= currentDate) {
         upcoming.push({
-          id: race.evnhId,
-          title: race.evnhName,
-          date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
-          location: race.evnhLocation,
-          image: race.evnhImage || '/images/placeholder.jpg',
-          startDate: race.evnhStartDate
-        })
-      } else {
-        past.push({
           id: race.evnhId,
           title: race.evnhName,
           date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
@@ -71,15 +52,13 @@ const fetchRaces = async () => {
     // Sort upcoming races by nearest date
     upcoming.sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
     
-    // Sort past races by most recent
-    past.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-
+    // Just set the upcoming races
     races.value = upcoming
-    pastRaces.value = past
+    
   } catch (err) {
     error.value = 'Failed to load races'
     console.error('Error fetching races:', err)
-    console.error('Error details:', err.message) // Additional error details
+    console.error('Error details:', err.message)
   } finally {
     isLoading.value = false
   }
@@ -140,16 +119,6 @@ const filteredUpcomingRaces = computed(() => {
   return filtered
 })
 
-const filteredPastRaces = computed(() => {
-  if (!searchQuery.value) return pastRaces.value
-
-  const query = searchQuery.value.toLowerCase()
-  return pastRaces.value.filter(race => {
-    return race.title.toLowerCase().includes(query) ||
-      race.location.toLowerCase().includes(query)
-  })
-})
-
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   const [year, month, day] = dateStr.split('-')
@@ -157,10 +126,6 @@ const formatDate = (dateStr) => {
 }
 
 // Methods
-const handleSearch = () => {
-  console.log('Searching for:', searchQuery.value)
-}
-
 const handleDateChange = (event) => {
   const inputDate = event.target.value
   selectedDate.value = formatDate(inputDate)
@@ -173,6 +138,14 @@ const resetFilters = () => {
   document.getElementById('date-input').value = '' // Reset the input value
 }
 
+const totalPages = computed(() => Math.ceil(filteredUpcomingRaces.value.length / itemsPerPage))
+
+const paginatedRaces = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredUpcomingRaces.value.slice(start, end)
+})
+
 onMounted(() => {
   fetchRaces()
 })
@@ -180,164 +153,142 @@ onMounted(() => {
 </script>
 
 <template>
-  <Header />
-  <main class="race-finder">
-    <section class="race-finder-container">
-      <!-- Search Header -->
-      <header class="header">
-        <h1 class="title">Find Your Next Race</h1>
-        <div class="search-container">
-          <div class="search-input-container">
-          <input 
-            v-model="searchQuery"
-            type="text" 
-            placeholder="Search races by name or location" 
-            class="search-input"
-            @keyup.enter="handleSearch"
-          />
-          <button 
-            v-show="searchQuery" 
-            class="clear-button" 
-            @click="clearSearch"
-            type="button"
-          >
-          <i class="fas fa-times"></i>
-
-          <div v-if="isLoading" class="loading-state">
-        <div class="loader"></div>
-        Loading races...
-      </div>
-      
-      <div v-else-if="error" class="error-state">
-        {{ error }}
-        <button @click="fetchRaces" class="retry-button">
-          Retry
-        </button>
-      </div>
-        </button>
-          </div>
-        </div>
-      </header>
-
-      <!-- Main Content -->
-      <div class="content">
-        <div class="content-row">
-          <!-- Filter Section -->
-          <aside class="filter-column">
-            <div class="filter-container">
-              <label for="type-select" class="filter-label">Type</label>
-              <div class="select-container">
-                <select 
-                  id="type-select" 
-                  v-model="selectedType"
-                  class="filter-select"
-                >
-                  <option value="">Select Type</option>
-                  <option value="ultra">Ultra</option>
-                  <option value="marathon">Marathon</option>
-                  <option value="half-marathon">Half Marathon</option>
-                  <option value="10k">10K</option>
-                  <option value="5k">5K</option>
-                </select>
-                <i class="fas fa-chevron-down select-arrow"></i>
-              </div>
-
-               <!-- Add Province Filter -->
-              <label for="province-select" class="filter-label">Province</label>
-                <div class="select-container">
-                <select 
-                  id="province-select" 
-                  v-model="selectedProvince"
-                  class="filter-select"
-                >
-                  <option value="">Select Province</option>
-                  <option 
-                    v-for="province in provinces" 
-                    :key="province" 
-                    :value="province"
-                  >
-                    {{ province }}
-                  </option>
-                </select>
-                <i class="fas fa-chevron-down select-arrow"></i>
-              </div>
-
-              <label for="date-input" class="filter-label">Date</label>
-              <input
-              type="date"
-              id="date-input"
-              class="date-input"
-              @input="handleDateChange"
-              :value="selectedDate ? selectedDate.split('/').reverse().join('-') : ''"
-              placeholder="DD/MM/YYYY"
+    <Header />
+    <main class="race-finder">
+      <section class="race-finder-container">
+        <!-- Search Header -->
+        <header class="header">
+          <h1 class="title">Upcoming Races</h1>
+          <div class="search-container">
+            <div class="search-input-container">
+              <input 
+                v-model="searchQuery"
+                type="text" 
+                placeholder="Search races by name or location" 
+                class="search-input"
               />
-
-              <button class="reset-button" @click="resetFilters">
-                Reset Filter
-              </button>
             </div>
-          </aside>
-
-          <!-- Main Content Area -->
-          <div class="main-content">
-            <!-- Upcoming Races Section -->
-            <section class="races-section">
-              <div class="section-header">
-                <h2 class="section-title">Upcoming Races</h2>
-                <button class="view-more" @click="goToUpcomingEvents">View more</button>
+          </div>
+        </header>
+  
+        <!-- Main Content -->
+        <div class="content">
+          <div class="content-row">
+            <!-- Filter Section -->
+            <aside class="filter-column">
+              <div class="filter-container">
+                <label for="type-select" class="filter-label">Type</label>
+                <div class="select-container">
+                  <select 
+                    id="type-select" 
+                    v-model="selectedType"
+                    class="filter-select"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="ultra">Ultra</option>
+                    <option value="marathon">Marathon</option>
+                    <option value="half-marathon">Half Marathon</option>
+                    <option value="10k">10K</option>
+                    <option value="5k">5K</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-arrow"></i>
+                </div>
+  
+                <label for="province-select" class="filter-label">Province</label>
+                <div class="select-container">
+                  <select 
+                    id="province-select" 
+                    v-model="selectedProvince"
+                    class="filter-select"
+                  >
+                    <option value="">Select Province</option>
+                    <option 
+                      v-for="province in provinces" 
+                      :key="province" 
+                      :value="province"
+                    >
+                      {{ province }}
+                    </option>
+                  </select>
+                  <i class="fas fa-chevron-down select-arrow"></i>
+                </div>
+  
+                <label for="date-input" class="filter-label">Date</label>
+                <input
+                  type="date"
+                  id="date-input"
+                  class="date-input"
+                  v-model="selectedDate"
+                />
+  
+                <button class="reset-button" @click="resetFilters">
+                  Reset Filter
+                </button>
               </div>
-
-              <div class="races-grid">
-                <article 
-                  v-for="race in filteredUpcomingRaces.slice(0, 4)" 
-                  :key="race.id"
-                  class="race-card"
-                >
-                  <img
-                    :src="race.image"
-                    :alt="race.title"
-                    class="race-image"
-                  />
-                  <div class="race-content">
-                    <h3 class="race-title">{{ race.title }}</h3>
-                    <p class="race-date">{{ race.date }} | {{ race.location }}</p>
+            </aside>
+  
+            <!-- Main Content Area -->
+            <div class="main-content">
+              <div v-if="isLoading" class="loading-state">
+                <div class="loader"></div>
+                Loading races...
+              </div>
+              
+              <div v-else-if="error" class="error-state">
+                {{ error }}
+                <button @click="fetchRaces" class="retry-button">Retry</button>
+              </div>
+  
+              <div v-else class="races-container">
+                <!-- Races Grid -->
+                <div class="races-grid">
+                  <article 
+                    v-for="race in paginatedRaces" 
+                    :key="race.id"
+                    class="race-card"
+                  >
+                    <img
+                      :src="race.image"
+                      :alt="race.title"
+                      class="race-image"
+                    />
+                    <div class="race-content">
+                      <h3 class="race-title">{{ race.title }}</h3>
+                      <p class="race-date">{{ race.date }} | {{ race.location }}</p>
+                    </div>
+                  </article>
+                </div>
+  
+                <!-- Pagination -->
+                <div class="pagination">
+                  <span class="pagination-info">
+                    Page {{ currentPage }} of {{ totalPages || 1 }}
+                  </span>
+                  <div class="pagination-controls" v-if="totalPages > 1">
+                    <button 
+                      :disabled="currentPage === 1"
+                      @click="currentPage--"
+                      class="pagination-button"
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      :disabled="currentPage === totalPages"
+                      @click="currentPage++"
+                      class="pagination-button"
+                    >
+                      Next
+                    </button>
                   </div>
-                </article>
+                </div>
               </div>
-              </section>
-
-            <!-- Past Races Section -->
-            <section class="races-section">
-              <div class="section-header">
-                <h2 class="section-title">Past Races</h2>
-                <button class="view-more" @click="goToPastEvents">View more</button>
-              </div>
-
-              <div class="races-grid">
-                <article 
-                  v-for="race in pastRaces.slice(0, 4)" 
-                  :key="race.id"
-                  class="race-card"
-                >
-                  <img
-                    :src="race.image"
-                    :alt="race.title"
-                    class="race-image"
-                  />
-                  <div class="race-content">
-                    <h3 class="race-title">{{ race.title }}</h3>
-                    <p class="race-date">{{ race.date }} | {{ race.location }}</p>
-                  </div>
-                </article>
-              </div>
-            </section>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
-  </main>
-  <Footer />
-</template>
+      </section>
+    </main>
+    <Footer />
+  </template>
 
 <style scoped>
 
@@ -559,44 +510,6 @@ date-input::-webkit-datetime-edit-fields-wrapper {
   gap: 32px;
 }
 
-.races-section {
-  background: #fff;
-  border-radius: 8px;
-  padding: 24px;
-  border: 1px solid #e5e7eb;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1c1c21;
-}
-
-.view-more {
-  color: #617afa;
-  font-size: 14px;
-  font-weight: 500;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.view-more:hover {
-  color: #4c62c8;
-}
-
-.featured-race {
-  margin-bottom: 24px;
-}
-
 .races-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -629,10 +542,6 @@ date-input::-webkit-datetime-edit-fields-wrapper {
   object-fit: cover;
 }
 
-.featured-image {
-  height: 300px;
-}
-
 .race-content {
   padding: 16px;
   flex: 1;
@@ -654,39 +563,40 @@ date-input::-webkit-datetime-edit-fields-wrapper {
 
 .pagination {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 32px;
-}
-
-.pagination-item {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  margin-top: 32px;
+  padding: 16px 0;
+}
+
+
+.pagination-info {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 16px;
+}
+
+.pagination-button {
   padding: 8px 16px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.3s;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-}
-
-.pagination-item:hover {
-  background: #f9fafb;
-}
-
-.pagination-item.active {
   background: #617afa;
   color: white;
-  border-color: #617afa;
-}
-
-.pagination-item.active .pagination-arrow {
-  color: white;
-}
-
-.pagination-number {
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
   font-weight: 500;
+}
+
+.pagination-button:disabled {
+  background: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.pagination-button:not(:disabled):hover {
+  background: #4c62c8;
 }
 
 @keyframes spin {
@@ -717,24 +627,11 @@ date-input::-webkit-datetime-edit-fields-wrapper {
   .title {
     font-size: 28px;
   }
-
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
 }
 
 @media (max-width: 480px) {
-  .featured-image {
-    height: 200px;
-  }
 
   .filter-column {
-    padding: 16px;
-  }
-
-  .races-section {
     padding: 16px;
   }
 }
