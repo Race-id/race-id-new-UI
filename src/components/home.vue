@@ -2,6 +2,7 @@
 import Header from "@/components/header.vue";
 import Footer from "@/components/footer.vue";
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 
 const images = ref([
   '/images/Hero banner 1.jpg',
@@ -9,10 +10,30 @@ const images = ref([
   '/images/Hero banner 3.jpg'
 ]);
 
+const router = useRouter();
+const goToRacePage = () => {
+  router.push('/race');
+}
+
 const currentImageIndex = ref(0);
 
 const nextImage = () => {
   currentImageIndex.value = (currentImageIndex.value + 1) % images.value.length;
+};
+
+const setupIntersectionObserver = () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('animate-in');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el);
+  });
 };
 
 const reviews = ref ([
@@ -82,6 +103,7 @@ const isTransitioning = ref(false);
 onMounted(() => {
   setInterval(nextImage, 4000);
   setInterval(nextReview, 3000);
+  setupIntersectionObserver();
 });
 </script>
 
@@ -99,17 +121,17 @@ onMounted(() => {
       ]"
     >
     </div>
-    <div class ="hero-content">
+    <div class ="hero-content animate-fade-in-up">
       <h1 class ="hero-title">Track Your Races Achieve Your Goals</h1>
       <p class="hero-description">All in one place with Race.id.</p>
       <div class="hero-buttons">
-        <button class="button-primary">Find Race</button>
+        <button class="button-primary" @click ="goToRacePage">Find Race</button>
         </div>
       </div>
       </section>
 
       <!-- How It Works -->
-        <section class="how-it-works">
+        <section class="how-it-works animate-on-scroll">
     <header class="section-header">
       <h2 class="section-title">How It Works</h2>
       <p class="section-description">Three simple steps to join a race</p>
@@ -134,7 +156,7 @@ onMounted(() => {
   </section>
 
        <!-- Sorting by place -->
-      <section class="place-section">
+      <section class="place-section animate-on-scroll">
         <header class="section-header">
           <h2 class="section-title">Race Destination</h2>
           </header>
@@ -159,7 +181,7 @@ onMounted(() => {
     </section>
   
       <!-- Events Section -->
-      <section class="events-section">
+      <section class="events-section animate-on-scroll">
         <header class="section-header">
           <h2 class="section-title">Featured Events</h2>
           <p class="section-description">
@@ -216,7 +238,7 @@ onMounted(() => {
       </section>
   
       <!-- Articles Section -->
-      <section class="articles-section">
+      <section class="articles-section animate-on-scroll">
         <h2 class="section-title">Featured Articles</h2>
         <div class="article-cards">
           <!-- Article Card 1 -->
@@ -264,7 +286,7 @@ onMounted(() => {
         </div>
       </section>
 
-      <section class="reviews-section">
+      <section class="reviews-section animate-on-scroll">
         <header class="section-header">
           <h2 class="section-title">Reviews</h2>
           <p class="section-description">Hear from our community</p>
@@ -296,7 +318,7 @@ onMounted(() => {
       </section>
 
         <!-- Newsletter Section -->
-  <section class="newsletter-section">
+  <section class="newsletter-section animate-on-scroll">
     <div class="newsletter-container">
       <div class="newsletter-content">
         <h2 class="newsletter-title">Get Updates on Latest Races</h2>
@@ -313,6 +335,35 @@ onMounted(() => {
   </template>
   
   <style scoped>
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  .animate-slide-in {
+    animation: slideInLeft -.6s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+
+  .animate-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.animate-on-scroll.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+
   /* Main Container */
   .container {
     font-family: "Plus Jakarta Sans", sans-serif;
@@ -375,6 +426,7 @@ onMounted(() => {
     color: #fff;
     max-width: 689px;
     padding: 0 20px;
+    animation: fadeInUp 0.8s ease-out;
   }
 
     .hero-title {
@@ -428,6 +480,15 @@ onMounted(() => {
     margin-top: 32px;
     justify-content: center;
   }
+
+  .step {
+    opacity: 0;
+    animation: slideInLeft 0.6s ease-out forwards;
+  }
+
+  .step:nth-child(1) { animation-delay: 200ms; }
+  .step:nth-child(2) { animation-delay: 400ms; }
+  .step:nth-child(3) { animation-delay: 600ms; }
 
   .step-card {
     flex: 1;
@@ -487,7 +548,15 @@ onMounted(() => {
     position: relative;
     cursor: pointer;
     transition: transform 0.3s ease;
+    opacity: 0;
+    animation: scaleIn 0.5s ease-out forwards;
   }
+
+  .place-box:nth-child(1) { animation-delay: 100ms; }
+  .place-box:nth-child(2) { animation-delay: 200ms; }
+  .place-box:nth-child(3) { animation-delay: 300ms; }
+  .place-box:nth-child(4) { animation-delay: 400ms; }
+
 
   .place-box:hover {
     transform: translateY(-5px);
@@ -548,7 +617,13 @@ onMounted(() => {
     flex-direction: column;
     gap: 12px;
     padding-bottom: 12px;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out forwards;
   }
+
+  .event-card:nth-child(1) { animation-delay: 200ms; }
+  .event-card:nth-child(2) { animation-delay: 400ms; }
+  .event-card:nth-child(3) { animation-delay: 600ms; }
   
   .event-image {
     width: 100%;
@@ -605,6 +680,8 @@ onMounted(() => {
     flex-direction: column;
     gap: 12px;
     padding-bottom: 12px;
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out forwards;
   }
   
   .article-image {
@@ -733,6 +810,9 @@ onMounted(() => {
   border: 2px solid #E5E7EB;
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  animation: scaleIn 0.6s ease-out forwards;
+  animation-delay: 200ms;
 }
 
 .newsletter-container::before {
@@ -815,6 +895,39 @@ onMounted(() => {
   background: #283f95;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(40, 163, 149, 0.2);
+}
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  }
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
   
   /* Responsive Styles */

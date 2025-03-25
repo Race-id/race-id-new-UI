@@ -1,826 +1,664 @@
 <script setup>
-import Header from "@/components/header.vue";
-import Footer from "@/components/footer.vue";
-import { useQuery } from "@tanstack/vue-query";
-import { computed, ref } from "vue";
-import api from "@/components/services/api";
-import dayjs from "dayjs";
-import { useRouter } from "vue-router";
+import { ref } from 'vue'
+import Header from '@/components/header.vue'
+import Footer from '@/components/footer.vue'
 
-const router = useRouter();
+// State management
+const searchQuery = ref('')
+const selectedType = ref('')
+const selectedDate = ref('')
+const currentPage = ref(1)
+const selectedProvince = ref('')
 
-const pageSize = ref(12);
-const searchQuery = ref("");
-
-const paginationQueryParams = computed(() => ({
-  pageUpcoming: router.currentRoute.value.query.pageUpcoming,
-  pagePast: router.currentRoute.value.query.pagePast,
-}));
-const pageUpcoming = computed(() =>
-  parseInt(paginationQueryParams.value.pageUpcoming ?? "1")
-);
-const pagePast = computed(() =>
-  parseInt(paginationQueryParams.value.pagePast ?? "1")
-);
-
-const localQueryParams = ref({
-  category: null,
-  startDate: null,
-  endDate: null,
-});
-
-function formatDate(date) {
-  return dayjs(date).format("DD MMM YYYY");
+const clearSearch = () => {
+  searchQuery.value = ''
 }
 
-function onStartDateInput(event) {
-  localQueryParams.value = {
-    ...localQueryParams.value,
-    startDate: event.target.value ? new Date(event.target.value) : null,
-  };
-  
-  router.push({
-    query: {
-      ...router.currentRoute.value.query,
-      pageUpcoming: 1,
-      pagePast: 1,
-    },
-    path: router.currentRoute.value.path,
-  });
-}
-
-function onEndDateInput(event) {
-  localQueryParams.value = {
-    ...localQueryParams.value,
-    endDate: event.target.value ? new Date(event.target.value) : null,
-  };
-  
-  router.push({
-    query: {
-      ...router.currentRoute.value.query,
-      pageUpcoming: 1,
-      pagePast: 1,
-    },
-    path: router.currentRoute.value.path,
-  });
-}
-
-function onResetFilters() {
-  localQueryParams.value = {
-    category: null,
-    startDate: null,
-    endDate: null,
-  };
-  searchQuery.value = "";
-  
-  router.push({
-    query: {
-      pageUpcoming: 1,
-      pagePast: 1,
-    },
-    path: router.currentRoute.value.path,
-  });
-}
-
-function filtersToApiQueryParams({
-  category = null,
-  startDate = null,
-  endDate = null,
-  isPastEvents = false,
-  search = null,
-}) {
-  const dateToApiFormat = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day} 00:00:00`;
-  };
-
-  const baseParams = {
-    "filter[evnhCategory]": category,
-    "filter[evnhName][like]": search ? `%${search}%` : null,
-  };
-
-  if (isPastEvents) {
-    const today = new Date();
-    return {
-      ...baseParams,
-      "filter[evnhStartDate][<]": dateToApiFormat(today),
-      "filter[evnhStartDate][>=]": startDate ? dateToApiFormat(startDate) : null,
-      "filter[evnhEndDate][<=]": endDate ? dateToApiFormat(endDate) : null,
-    };
-  } else {
-    return {
-      ...baseParams,
-      "filter[evnhStartDate][>=]": startDate ? dateToApiFormat(startDate) : dateToApiFormat(new Date()),
-      "filter[evnhEndDate][<=]": endDate ? dateToApiFormat(endDate) : null,
-    };
+// Race data
+const races = ref([
+  {
+    id: 1,
+    title: 'Makassar Half Marathon 2025',
+    date: '31 May 2025',
+    location: 'Anjungan Pantai Losari',
+    image: '/images/makassar-marathon.jpg',
+    featured: true
+  },
+  {
+    id: 2,
+    title: 'Jakarta Marathon 2025',
+    date: '15 June 2025',
+    location: 'Monas Jakarta',
+    image: '/images/jakarta-marathon.jpg'
+  },
+  {
+    id: 3,
+    title: 'Bali Run 2025',
+    date: '20 June 2025',
+    location: 'Kuta Beach',
+    image: '/images/bali-run.jpg'
+  },
+  {
+    id: 4,
+    title: 'Bandung Night Run 2025',
+    date: '25 June 2025',
+    location: 'Dago Bandung',
+    image: '/images/bandung-run.jpg'
   }
-}
+])
 
-const fetchLiveEventsQuery = useQuery({
-  queryKey: [localQueryParams, pageUpcoming, pageSize],
-  queryFn: () =>
-    api.get("/resources/event_public_header", {
-      params: {
-        pageNumber: pageUpcoming.value,
-        pageSize: pageSize.value,
-        sort: "evnhStartDate",
-        ...filtersToApiQueryParams({
-          ...localQueryParams.value,
-          startDate: new Date(),
-          isPastEvents: false,
-        }),
-      },
-      validateStatus: (_status) => true,
-    }),
-});
+const provinces = [
+  'Aceh',
+  'Sumatera Utara',
+  'Sumatera Barat',
+  'Riau',
+  'Kepulauan Riau',
+  'Jambi',
+  'Sumatera Selatan',
+  'Kepulauan Bangka Belitung',
+  'Bengkulu',
+  'Lampung',
+  'DKI Jakarta',
+  'Banten',
+  'Jawa Barat',
+  'Jawa Tengah',
+  'DI Yogyakarta',
+  'Jawa Timur',
+  'Bali',
+  'Nusa Tenggara Barat',
+  'Nusa Tenggara Timur',
+  'Kalimantan Barat',
+  'Kalimantan Tengah',
+  'Kalimantan Selatan',
+  'Kalimantan Timur',
+  'Kalimantan Utara',
+  'Sulawesi Utara',
+  'Gorontalo',
+  'Sulawesi Tengah',
+  'Sulawesi Barat',
+  'Sulawesi Selatan',
+  'Sulawesi Tenggara',
+  'Maluku',
+  'Maluku Utara',
+  'Papua',
+  'Papua Barat'
+]
 
-const fetchPastEventsQuery = useQuery({
-  queryKey: ["pastEvents", pagePast, pageSize, localQueryParams],
-  queryFn: () =>
-    api.get("/resources/event_public_header", {
-      params: {
-        pageNumber: pagePast.value,
-        pageSize: pageSize.value,
-        sort: "-evnhStartDate",
-        ...filtersToApiQueryParams({
-          ...localQueryParams.value,
-          isPastEvents: true,
-        }),
-      },
-      validateStatus: (_status) => true,
-    }),
-});
-
-const liveEvents = computed(() => {
-  return fetchLiveEventsQuery.data.value?.data?.data ?? [];
-});
-
-const liveEventsTotalRecords = computed(
-  () => fetchLiveEventsQuery.data.value?.data?.status?.totalRecords ?? 0
-);
-
-const liveEventsTotalPages = computed(() =>
-  Math.ceil(liveEventsTotalRecords.value / pageSize.value)
-);
-
-const pastEvents = computed(() => {
-  return fetchPastEventsQuery.data.value?.data?.data ?? [];
-});
-
-const pastEventsTotalRecords = computed(
-  () => fetchPastEventsQuery.data.value?.data?.status?.totalRecords ?? 0
-);
-
-const pastEventsTotalPages = computed(() =>
-  Math.ceil(pastEventsTotalRecords.value / pageSize.value)
-);
-
-function onSearch() {
-  if (!searchQuery.value) {
-    localQueryParams.value = {
-      ...localQueryParams.value,
-      search: null,
-    };
-  } else {
-    localQueryParams.value = {
-      ...localQueryParams.value,
-      search: searchQuery.value,
-    };
+const pastRaces = ref([
+  {
+    id: 1,
+    title: 'Surabaya Marathon 2024',
+    date: '10 Dec 2024',
+    location: 'Surabaya City',
+    image: '/images/surabaya-marathon.jpg'
+  },
+  {
+    id: 2,
+    title: 'Yogyakarta Heritage Run 2024',
+    date: '15 Dec 2024',
+    location: 'Malioboro Street',
+    image: '/images/yogya-run.jpg'
+  },
+  {
+    id: 3,
+    title: 'Medan City Run 2024',
+    date: '20 Dec 2024',
+    location: 'Merdeka Walk',
+    image: '/images/medan-run.jpg'
   }
+])
 
-  router.push({
-    query: {
-      ...router.currentRoute.value.query,
-      pageUpcoming: 1,
-      pagePast: 1,
-    },
-    path: router.currentRoute.value.path,
-  });
+const filteredUpcomingRaces = computed (() => {
+  if (!searchQuery.value) return races.value
+
+  const query = searchQuery.value.toLowerCase()
+  return races.value.filter(race => {
+    return race.title.toLowerCase().includes(query) ||
+      race.location.toLowerCase().includes(query)
+  })
+})
+
+const filteredPastRaces = computed (() => {
+  if (!searchQuery.value) return pastRaces.value
+
+  const query = searchQuery.value.toLowerCase()
+  return pastRaces.value.filter(race => {
+    return race.title.toLowerCase().includes(query) ||
+      race.location.toLowerCase().includes(query)
+  })
+})
+
+// Methods
+const handleSearch = () => {
+  console.log('Searching for:', searchQuery.value)
 }
 
-function onCategoryInput(event) {
-  localQueryParams.value = {
-    ...localQueryParams.value, 
-    category: event.target.value || null,
-  };
-
-  router.push({
-    query: {
-      ...router.currentRoute.value.query,
-      pageUpcoming: 1,
-      pagePast: 1,
-    },
-    path: router.currentRoute.value.path,
-  });
+const resetFilters = () => {
+  selectedType.value = ''
+  selectedDate.value = ''
+  selectedProvince.value = ''
 }
 
-function onChangeLiveEventsPage(page) {
-  if (page > 0 && page <= liveEventsTotalPages.value) {
-    const query = {...router.currentRoute.value.query}
-    
-    if (page === 1) {
-      delete query.pageUpcoming  
-    } else {
-      query.pageUpcoming = page
-    }
-
-    router.push({
-      query,
-      path: router.currentRoute.value.path,
-    });
-  }
-}
-
-function onChangePastEventsPage(page) {
-  if (page > 0 && page <= pastEventsTotalPages.value) {
-    const query = {...router.currentRoute.value.query}
-    
-    if (page === 1) {
-      delete query.pagePast
-    } else {
-      query.pagePast = page
-    }
-
-    router.push({
-      query,
-      path: router.currentRoute.value.path,
-    });
-  }
+const changePage = (page) => {
+  currentPage.value = page
 }
 </script>
 
-
-
 <template>
-  <div class="race-page">
-    <Header />
-
-    <div class="fade-in">
-      <!-- Hero Section -->
-      <section class="hero">
-        <div class="hero-content container">
-          <h1>Find Your Next Race</h1>
-          <div class="search-box">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search races by name or location..."
-              @keyup.enter="onSearch"
-              @input="onSearch"
-            />
-            <button type="button" @click="onSearch">
-              <i class="fas fa-search"></i>
-            </button>
+  <Header />
+  <main class="race-finder">
+    <section class="race-finder-container">
+      <!-- Search Header -->
+      <header class="header">
+        <h1 class="title">Find Your Next Race</h1>
+        <div class="search-container">
+          <div class="search-input-container">
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Search races by name or location" 
+            class="search-input"
+            @keyup.enter="handleSearch"
+          />
+          <button 
+            v-show="searchQuery" 
+            class="clear-button" 
+            @click="clearSearch"
+            type="button"
+          >
+          <i class="fas fa-times"></i>
+        </button>
           </div>
         </div>
-      </section>
+      </header>
 
       <!-- Main Content -->
-      <main class="container">
-        <div v-if="fetchLiveEventsQuery.isLoading.value" class="loading-state">
-          Loading events...
-        </div>
-        <div
-          v-else-if="
-            fetchLiveEventsQuery.isError.value &&
-            fetchLiveEventsQuery.data.value.status === 500
-          "
-          class="error-state"
-        >
-          {{ fetchLiveEventsQuery.error.value.message }}
-        </div>
-        <div class="race-layout">
-          <!-- Advanced Filter -->
-          <div class="advanced-filter">
-            <div class="filter-group">
-              <select @input="onCategoryInput">
-                <option value="" :selected="localQueryParams.category === null">
-                  Tipe
-                </option>
-                <option
-                  value="Road Run"
-                  :selected="localQueryParams.category === 'Road Run'"
+      <div class="content">
+        <div class="content-row">
+          <!-- Filter Section -->
+          <aside class="filter-column">
+            <div class="filter-container">
+              <label for="type-select" class="filter-label">Type</label>
+              <div class="select-container">
+                <select 
+                  id="type-select" 
+                  v-model="selectedType"
+                  class="filter-select"
                 >
-                  Road Run
-                </option>
-                <option
-                  value="Trail Run"
-                  :selected="localQueryParams.category === 'Trail Run'"
+                  <option value="">Select Type</option>
+                  <option value="ultra">Ultra</option>
+                  <option value="marathon">Marathon</option>
+                  <option value="half-marathon">Half Marathon</option>
+                  <option value="10k">10K</option>
+                  <option value="5k">5K</option>
+                </select>
+                <i class="fas fa-chevron-down select-arrow"></i>
+              </div>
+
+               <!-- Add Province Filter -->
+              <label for="province-select" class="filter-label">Province</label>
+                <div class="select-container">
+                <select 
+                  id="province-select" 
+                  v-model="selectedProvince"
+                  class="filter-select"
                 >
-                  Trail Run
-                </option>
-                <option
-                  value="Virtual Run"
-                  :selected="localQueryParams.category === 'Virtual Run'"
-                >
-                  Virtual Run
-                </option>
-                <option
-                  value="Other"
-                  :selected="localQueryParams.category === 'other'"
-                >
-                  Other
-                </option>
-              </select>
+                  <option value="">Select Province</option>
+                  <option 
+                    v-for="province in provinces" 
+                    :key="province" 
+                    :value="province"
+                  >
+                    {{ province }}
+                  </option>
+                </select>
+                <i class="fas fa-chevron-down select-arrow"></i>
+              </div>
+
+              <label for="date-input" class="filter-label">Date</label>
               <input
-                id="filtersStartDateInput"
-                @input="onStartDateInput"
-                :value="localQueryParams.startDate?.toISOString().slice(0, 10)"
                 type="date"
-                placeholder="Tanggal"
+                id="date-input"
+                v-model="selectedDate"
+                class="date-input"
               />
-              <p>to</p>
-              <input
-                id="filtersEndDateInput"
-                @input="onEndDateInput"
-                :value="localQueryParams.endDate?.toISOString().slice(0, 10)"
-                type="date"
-                placeholder="Tanggal"
-              />
-              <button
-                :disabled="
-                  localQueryParams.category === null &&
-                  localQueryParams.startDate === null &&
-                  localQueryParams.endDate === null
-                "
-                @click="onResetFilters"
-                class="search-btn"
-              >
+
+              <button class="reset-button" @click="resetFilters">
                 Reset Filter
               </button>
             </div>
-          </div>
+          </aside>
 
-          <!-- Live Events Section -->
-          <section class="race-list">
-            <div class="race-list-header">
-              <h2>{{ liveEvents?.length || 0 }} Upcoming Races</h2>
-            </div>
-            <div
-              v-if="fetchLiveEventsQuery.isLoading.value"
-              class="loading-state"
-            >
-              Loading live events...
-            </div>
-            <div
-              v-else-if="fetchLiveEventsQuery.isError.value"
-              class="error-state"
-            >
-              {{ fetchLiveEventsQuery.error.value.message }}
-            </div>
-            <div v-else class="race-grid">
-              <article
-                v-for="event in liveEvents"
-                :key="event.evnhId"
-                class="race-card"
-              >
-                <div class="race-content">
-                  <div class="race-info">
-                    <h3>{{ event.evnhName }}</h3>
-                    <span class="category-tag">{{
-                      event.evnhCategory || "Uncategorized"
-                    }}</span>
-                    <p class="race-date">
-                      <i class="fas fa-calendar"></i>
-                      {{ formatDate(event.evnhStartDate) }}
-                    </p>
-                    <p class="race-location">
-                      <i class="fas fa-map-marker-alt"></i>
-                      {{ event.evnhPlace || "To Be Announced" }}
-                    </p>
-                  </div>
-                  <div class="race-footer">
-                    <router-link
-                      :to="{
-                        name: 'race-detail',
-                        params: { id: event.evnhId },
-                      }"
-                      class="btn-register"
-                    >
-                      Detail
-                    </router-link>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
+          <!-- Main Content Area -->
+          <div class="main-content">
+            <!-- Upcoming Races Section -->
+            <section class="races-section">
+              <div class="section-header">
+                <h2 class="section-title">Upcoming Races</h2>
+                <button class="view-more">View more</button>
+              </div>
 
-          <!-- Live Events Pagination -->
-          <div class="pagination">
-            <button
-              @click="onChangeLiveEventsPage(pageUpcoming - 1)"
-              :disabled="pageUpcoming === 1"
-            >
-              Previous
-            </button>
-            <span>Page {{ pageUpcoming }} of {{ liveEventsTotalPages }}</span>
-            <button
-              @click="onChangeLiveEventsPage(pageUpcoming + 1)"
-              :disabled="pageUpcoming === liveEventsTotalPages"
-            >
-              Next
-            </button>
-          </div>
-
-          <!-- Past Events Section -->
-          <section class="race-list past-events-section">
-            <div class="race-list-header">
-              <h2>{{ pastEvents?.length || 0 }} Past Races</h2>
-            </div>
-            <div
-              v-if="fetchPastEventsQuery.isLoading.value"
-              class="loading-state"
-            >
-              Loading past events...
-            </div>
-            <div
-              v-else-if="fetchPastEventsQuery.isError.value"
-              class="error-state"
-            >
-              {{ fetchPastEventsQuery.error.value.message }}
-            </div>
-            <div v-else class="race-grid">
-              <article
-                v-for="event in pastEvents"
-                :key="event.evnhId"
-                class="race-card"
-              >
-                <div class="race-content">
-                  <div class="race-info">
-                    <h3>{{ event.evnhName }}</h3>
-                    <span class="category-tag">{{
-                      event.evnhCategory || "Uncategorized"
-                    }}</span>
-                    <p class="race-date">
-                      <i class="fas fa-calendar"></i>
-                      {{ formatDate(event.evnhStartDate) }}
-                    </p>
-                    <p class="race-location">
-                      <i class="fas fa-map-marker-alt"></i>
-                      {{ event.evnhPlace || "To Be Announced" }}
-                    </p>
+              <!-- Featured Race -->
+              <div class="featured-race" v-if="filteredUpcomingRaces.length > 0">
+                <article class="race-card featured">
+                  <img
+                    :src="filteredUpcomingRaces[0].image"
+                    :alt="filteredUpcomingRaces[0].title"
+                    class="race-image featured-image"
+                  />
+                  <div class="race-content">
+                    <h3 class="race-title">{{ races[0].title }}</h3>
+                    <p class="race-date">{{ races[0].date }} | {{ races[0].location }}</p>
                   </div>
-                  <div class="race-footer">
-                    <button class="btn-register btn-closed">Closed</button>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </section>
+                </article>
+              </div>
 
-          <!-- Past Events Pagination -->
-          <div class="pagination">
-            <button
-              @click="onChangePastEventsPage(pagePast - 1)"
-              :disabled="pagePast === 1"
-            >
-              Previous
-            </button>
-            <span>Page {{ pagePast }} of {{ pastEventsTotalPages }}</span>
-            <button
-              @click="onChangePastEventsPage(pagePast + 1)"
-              :disabled="pagePast === pastEventsTotalPages"
-            >
-              Next
-            </button>
+              <!-- Regular Races Grid -->
+              <div class="races-grid">
+                <article 
+                  v-for="race in races.slice(1, 4)" 
+                  :key="race.id"
+                  class="race-card"
+                >
+                  <img
+                    :src="race.image"
+                    :alt="race.title"
+                    class="race-image"
+                  />
+                  <div class="race-content">
+                    <h3 class="race-title">{{ race.title }}</h3>
+                    <p class="race-date">{{ race.date }} | {{ race.location }}</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <!-- Past Races Section -->
+            <section class="races-section">
+              <div class="section-header">
+                <h2 class="section-title">Past Races</h2>
+                <button class="view-more">View more</button>
+              </div>
+
+              <div class="races-grid">
+                <article 
+                  v-for="race in pastRaces" 
+                  :key="race.id"
+                  class="race-card"
+                >
+                  <img
+                    :src="race.image"
+                    :alt="race.title"
+                    class="race-image"
+                  />
+                  <div class="race-content">
+                    <h3 class="race-title">{{ race.title }}</h3>
+                    <p class="race-date">{{ race.date }} | {{ race.location }}</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <!-- Pagination -->
+            <nav class="pagination">
+              <div class="pagination-item" 
+                   :class="{ active: currentPage === 1 }"
+                   @click="changePage(1)">
+                <i class="fas fa-chevron-left pagination-arrow"></i>
+                <span class="pagination-number">1</span>
+              </div>
+              <div class="pagination-item"
+                   :class="{ active: currentPage === 2 }"
+                   @click="changePage(2)">
+                <span class="pagination-number">2</span>
+                <i class="fas fa-chevron-right pagination-arrow"></i>
+              </div>
+            </nav>
           </div>
         </div>
-      </main>
-    </div>
-  </div>
-
+      </div>
+    </section>
+  </main>
   <Footer />
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
-
-body, .race-page {
-  font-family: Poppins, sans-serif;
-}
-.fade-in {
-  animation: fadeIn 0.6s ease-in;
+.race-finder {
+  min-height: 100vh;
+  background-color: #fafafa;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.hero {
-  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5));
-  background-size: cover;
-  background-position: center;
-  padding: 80px 0;
-  color: white;
-  text-align: center;
-}
-
-.hero-content {
-  max-width: 800px;
+.race-finder-container {
+  max-width: 1280px;
   margin: 0 auto;
+  padding: 40px 24px;
 }
 
-.hero h1 {
-  font-size: 2.5em;
-  margin-bottom: 20px;
+.header {
+  margin-bottom: 40px;
+  max-width: 898px;
+  margin: 0 auto 40px;
 }
 
-.search-box {
+.title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1c1c21;
+  margin-bottom: 24px;
+  line-height: 1.2;
+}
+
+.search-container {
   display: flex;
-  gap: 10px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.search-box input {
-  flex: 1;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 25px;
-  font-size: 1em;
-}
-
-.search-box button {
-  padding: 12px 25px;
-  border: none;
-  border-radius: 25px;
-  background: #1c61b0;
-  color: white;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.search-box button:hover {
-  background: #2252a4;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-
-.race-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-}
-
-.quick-filters {
-  padding: 20px;
-  display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 10px;
-  margin-bottom: -70px;
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
-.quick-filters input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  max-width: 300px;
-  height: 12px;
-  background: #ddd;
-  border-radius: 6px;
-  outline: none;
-  transition: background 0.3s ease;
-}
-
-.quick-filters input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 24px;
-  height: 24px;
-  background: #007bff;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.quick-filters input[type="range"]::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
-  background: #007bff;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.tag {
-  padding: 8px 20px;
-  border: 1px solid black;
-  border-radius: 20px;
-  background: var(--secondary);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  color: var(--primary);
-  margin: 8px;
-}
-
-.tag:hover {
-  background: #2252a4;
-  color: white;
-}
-
-.tag.active {
-  background: #2252a4;
-  color: white;
-  border-color: black;
-}
-
-.advanced-filter {
-  padding: 20px;
-  background: var(--secondary);
-  margin: 20px auto;
-  margin-top: -30px;
-  margin-bottom: 60px;
-  max-width: 1200px;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.filter-group {
-  display: flex;
-  gap: 15px;
-}
-
-.filter-group select,
-.filter-group input {
-  padding: 10px;
-  border: 1px solid black;
-  border-radius: 8px;
+.search-input-container {
   flex: 1;
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  position: relative;
 }
 
-.search-btn {
-  padding: 10px 16px;
-  background: #04a3e6;
-  color: white;
+.clear-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
   border: none;
-  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  padding: 8px;
+  color: #6b7280;
+  transition: color 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.clear-button:hover {
+  color: #1c1c21;
+}
+
+.clear-button i {
   font-size: 14px;
 }
 
-.search-btn:hover {
-  background: #0383b8;
-  transform: translateY(-2px);
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  outline: none;
+  color: #1c1c21;
+  padding-right: 40px;
+}
+
+.content {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.content-row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.filter-column {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+}
+
+.filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.filter-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1c1c21;
+}
+
+.select-container {
+  position: relative;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  background: #fff;
+  appearance: none;
+  color: #1c1c21;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: #3d404a;
+  pointer-events: none;
+}
+
+.date-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #1c1c21;
 }
 
 .reset-button {
-  padding: 6px 12px;
-  background: #fff;
-  border: 1px solid #04a3e6;
-  color: #04a3e6;
-  border-radius: 16px;
-  font-size: 12px;
+  width: 100%;
+  padding: 12px;
+  background: #617afa;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s;
+}
+
+.reset-button:hover {
+  background: #4c62c8;
+}
+
+.main-content {
   display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.races-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid #e5e7eb;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 4px;
+  margin-bottom: 24px;
 }
 
-.race-list-header {
-  margin-bottom: 20px;
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1c1c21;
 }
 
-.race-grid {
+.view-more {
+  color: #617afa;
+  font-size: 14px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.view-more:hover {
+  color: #4c62c8;
+}
+
+.featured-race {
+  margin-bottom: 24px;
+}
+
+.races-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.past-events-section {
-  margin-top: 60px;
-  padding-top: 40px;
-  border-top: 2px solid #eee;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
 }
 
 .race-card {
   background: #fff;
-  padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
+  border: 1px solid #e5e7eb;
+}
+
+.race-card:hover {
+  transform: translateY(-4px);
+}
+
+.race-card.featured {
+  grid-column: 1 / -1;
+}
+
+.race-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.featured-image {
+  height: 300px;
 }
 
 .race-content {
-  display: flex;
-  flex-direction: column;
+  padding: 16px;
 }
 
-.race-info {
-  margin-bottom: 20px;
+.race-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1c1c21;
+  margin-bottom: 8px;
 }
 
-.category-tag {
-  display: inline-block;
-  padding: 4px 12px;
-  background-color: #e9ecef;
-  color: #495057;
-  border-radius: 15px;
-  font-size: 0.8em;
-  margin: 5px 0;
-}
-
-.race-date,
-.race-location {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #666;
-}
-
-.race-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.race-price {
-  font-size: 1.2em;
-  color: #333;
-}
-
-.btn-register {
-  padding: 10px 20px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.btn-register:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+.race-date {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .pagination {
   display: flex;
   justify-content: center;
-  align-items: center;
-  margin-top: 20px;
+  gap: 8px;
+  margin-top: 32px;
 }
 
-.pagination button {
-  padding: 10px 20px;
-  margin: 0 5px;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.pagination button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.pagination span {
-  margin: 0 10px;
-}
-
-.tab-navigation {
+.pagination-item {
   display: flex;
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.tab-btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
   cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
+  border-radius: 8px;
+  transition: all 0.3s;
+  background: #fff;
+  border: 1px solid #e5e7eb;
 }
 
-.tab-btn.active {
-  background: #1c61b0;
+.pagination-item:hover {
+  background: #f9fafb;
+}
+
+.pagination-item.active {
+  background: #617afa;
+  color: white;
+  border-color: #617afa;
+}
+
+.pagination-item.active .pagination-arrow {
   color: white;
 }
 
-.btn-closed {
-  background-color: #ccc;
-  cursor: default;
+.pagination-number {
+  font-weight: 500;
 }
 
-.btn-closed:hover {
-  background-color: #ccc;
-  transform: none;
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .content-row {
+    grid-template-columns: 1fr;
+  }
+
+  .races-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .race-finder-container {
+    padding: 24px 16px;
+  }
+
+  .header {
+    margin-bottom: 24px;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .featured-image {
+    height: 200px;
+  }
+
+  .filter-column {
+    padding: 16px;
+  }
+
+  .races-section {
+    padding: 16px;
+  }
+
+  .pagination-item {
+    padding: 6px 12px;
+  }
 }
 </style>
