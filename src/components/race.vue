@@ -1,51 +1,79 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
 
 // State management
 const searchQuery = ref('')
 const selectedType = ref('')
-const selectedDate = ref('')
-const currentPage = ref(1)
+const selectedDate = ref('') 
 const selectedProvince = ref('')
+const isLoading = ref(true)
+const error = ref (null)
 
-const clearSearch = () => {
-  searchQuery.value = ''
-}
+const races = ref([])
+const pastRaces = ref([])
 
-// Race data
-const races = ref([
-  {
-    id: 1,
-    title: 'Makassar Half Marathon 2025',
-    date: '31 May 2025',
-    location: 'Anjungan Pantai Losari',
-    image: '/images/makassar-marathon.jpg',
-    featured: true
-  },
-  {
-    id: 2,
-    title: 'Jakarta Marathon 2025',
-    date: '15 June 2025',
-    location: 'Monas Jakarta',
-    image: '/images/jakarta-marathon.jpg'
-  },
-  {
-    id: 3,
-    title: 'Bali Run 2025',
-    date: '20 June 2025',
-    location: 'Kuta Beach',
-    image: '/images/bali-run.jpg'
-  },
-  {
-    id: 4,
-    title: 'Bandung Night Run 2025',
-    date: '25 June 2025',
-    location: 'Dago Bandung',
-    image: '/images/bandung-run.jpg'
+// Fetch races from API
+const fetchRaces = async () => {
+  try {
+    isLoading.value = true
+    const response = await fetch('https://steelytoe.com/dev.titudev.com/api/v1/resources/event_public_header')
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch races')
+    }
+
+    const data = await response.json()
+    console.log('API Response:', data) // Debug log
+
+    // Check if data is array, if not, try to access the correct property
+    const racesList = Array.isArray(data) ? data : data.data || []
+    
+    // Memisahkan races berdasarkan evnhStartDate
+    const currentDate = new Date()
+    const upcoming = []
+    const past = []
+
+    racesList.forEach(race => {
+      const raceDate = new Date(race.evnhStartDate)
+      if (raceDate >= currentDate) {
+        upcoming.push({
+          id: race.evnhId,
+          title: race.evnhName,
+          date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
+          location: race.evnhLocation,
+          image: race.evnhImage || '/images/placeholder.jpg',
+          startDate: race.evnhStartDate
+        })
+      } else {
+        past.push({
+          id: race.evnhId,
+          title: race.evnhName,
+          date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
+          location: race.evnhLocation,
+          image: race.evnhImage || '/images/placeholder.jpg',
+          startDate: race.evnhStartDate
+        })
+      }
+    })
+
+    // Sort upcoming races by nearest date
+    upcoming.sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+    
+    // Sort past races by most recent
+    past.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
+
+    races.value = upcoming
+    pastRaces.value = past
+  } catch (err) {
+    error.value = 'Failed to load races'
+    console.error('Error fetching races:', err)
+    console.error('Error details:', err.message) // Additional error details
+  } finally {
+    isLoading.value = false
   }
-])
+}
 
 const provinces = [
   'Aceh',
@@ -84,41 +112,25 @@ const provinces = [
   'Papua Barat'
 ]
 
-const pastRaces = ref([
-  {
-    id: 1,
-    title: 'Surabaya Marathon 2024',
-    date: '10 Dec 2024',
-    location: 'Surabaya City',
-    image: '/images/surabaya-marathon.jpg'
-  },
-  {
-    id: 2,
-    title: 'Yogyakarta Heritage Run 2024',
-    date: '15 Dec 2024',
-    location: 'Malioboro Street',
-    image: '/images/yogya-run.jpg'
-  },
-  {
-    id: 3,
-    title: 'Medan City Run 2024',
-    date: '20 Dec 2024',
-    location: 'Merdeka Walk',
-    image: '/images/medan-run.jpg'
-  }
-])
+const filteredUpcomingRaces = computed(() => {
+  let filtered = races.value
 
-const filteredUpcomingRaces = computed (() => {
-  if (!searchQuery.value) return races.value
-
-  const query = searchQuery.value.toLowerCase()
-  return races.value.filter(race => {
-    return race.title.toLowerCase().includes(query) ||
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(race => 
+      race.title.toLowerCase().includes(query) ||
       race.location.toLowerCase().includes(query)
-  })
+    )
+  }
+
+  if (selectedDate.value) {
+    filtered = filtered.filter(race => race.date === selectedDate.value)
+  }
+
+  return filtered
 })
 
-const filteredPastRaces = computed (() => {
+const filteredPastRaces = computed(() => {
   if (!searchQuery.value) return pastRaces.value
 
   const query = searchQuery.value.toLowerCase()
@@ -128,20 +140,33 @@ const filteredPastRaces = computed (() => {
   })
 })
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const [year, month, day] = dateStr.split('-')
+  return `${day}/${month}/${year}`
+}
+
 // Methods
 const handleSearch = () => {
   console.log('Searching for:', searchQuery.value)
+}
+
+const handleDateChange = (event) => {
+  const inputDate = event.target.value
+  selectedDate.value = formatDate(inputDate)
 }
 
 const resetFilters = () => {
   selectedType.value = ''
   selectedDate.value = ''
   selectedProvince.value = ''
+  document.getElementById('date-input').value = '' // Reset the input value
 }
 
-const changePage = (page) => {
-  currentPage.value = page
-}
+onMounted(() => {
+  fetchRaces()
+})
+
 </script>
 
 <template>
@@ -167,6 +192,18 @@ const changePage = (page) => {
             type="button"
           >
           <i class="fas fa-times"></i>
+
+          <div v-if="isLoading" class="loading-state">
+        <div class="loader"></div>
+        Loading races...
+      </div>
+      
+      <div v-else-if="error" class="error-state">
+        {{ error }}
+        <button @click="fetchRaces" class="retry-button">
+          Retry
+        </button>
+      </div>
         </button>
           </div>
         </div>
@@ -217,10 +254,12 @@ const changePage = (page) => {
 
               <label for="date-input" class="filter-label">Date</label>
               <input
-                type="date"
-                id="date-input"
-                v-model="selectedDate"
-                class="date-input"
+              type="date"
+              id="date-input"
+              class="date-input"
+              @input="handleDateChange"
+              :value="selectedDate ? selectedDate.split('/').reverse().join('-') : ''"
+              placeholder="DD/MM/YYYY"
               />
 
               <button class="reset-button" @click="resetFilters">
@@ -238,25 +277,9 @@ const changePage = (page) => {
                 <button class="view-more">View more</button>
               </div>
 
-              <!-- Featured Race -->
-              <div class="featured-race" v-if="filteredUpcomingRaces.length > 0">
-                <article class="race-card featured">
-                  <img
-                    :src="filteredUpcomingRaces[0].image"
-                    :alt="filteredUpcomingRaces[0].title"
-                    class="race-image featured-image"
-                  />
-                  <div class="race-content">
-                    <h3 class="race-title">{{ races[0].title }}</h3>
-                    <p class="race-date">{{ races[0].date }} | {{ races[0].location }}</p>
-                  </div>
-                </article>
-              </div>
-
-              <!-- Regular Races Grid -->
               <div class="races-grid">
                 <article 
-                  v-for="race in races.slice(1, 4)" 
+                  v-for="race in filteredUpcomingRaces.slice(0, 4)" 
                   :key="race.id"
                   class="race-card"
                 >
@@ -271,7 +294,7 @@ const changePage = (page) => {
                   </div>
                 </article>
               </div>
-            </section>
+              </section>
 
             <!-- Past Races Section -->
             <section class="races-section">
@@ -282,7 +305,7 @@ const changePage = (page) => {
 
               <div class="races-grid">
                 <article 
-                  v-for="race in pastRaces" 
+                  v-for="race in pastRaces.slice(0, 4)" 
                   :key="race.id"
                   class="race-card"
                 >
@@ -298,22 +321,6 @@ const changePage = (page) => {
                 </article>
               </div>
             </section>
-
-            <!-- Pagination -->
-            <nav class="pagination">
-              <div class="pagination-item" 
-                   :class="{ active: currentPage === 1 }"
-                   @click="changePage(1)">
-                <i class="fas fa-chevron-left pagination-arrow"></i>
-                <span class="pagination-number">1</span>
-              </div>
-              <div class="pagination-item"
-                   :class="{ active: currentPage === 2 }"
-                   @click="changePage(2)">
-                <span class="pagination-number">2</span>
-                <i class="fas fa-chevron-right pagination-arrow"></i>
-              </div>
-            </nav>
           </div>
         </div>
       </div>
@@ -323,6 +330,39 @@ const changePage = (page) => {
 </template>
 
 <style scoped>
+
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.loader {
+  border: 3px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 3px solid #617afa;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.retry-button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #617afa;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  background: #4c62c8;
+}
+
 .race-finder {
   min-height: 100vh;
   background-color: #fafafa;
@@ -466,6 +506,26 @@ const changePage = (page) => {
   color: #1c1c21;
 }
 
+.date-input::-webkit-datetime-edit,
+.date-input::-webkit-inner-spin-button,
+.date-input::-webkit-calendar-picker-indicator {
+  color: #1c1c21;
+}
+
+date-input::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+.date-input::-webkit-datetime-edit-text {
+  padding: 0 4px;
+}
+
+.date-input::-webkit-datetime-edit-month-field,
+.date-input::-webkit-datetime-edit-day-field,
+.date-input::-webkit-datetime-edit-year-field {
+  padding: 0;
+}
+
 .reset-button {
   width: 100%;
   padding: 12px;
@@ -529,7 +589,7 @@ const changePage = (page) => {
 
 .races-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 24px;
 }
 
@@ -540,6 +600,9 @@ const changePage = (page) => {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   transition: transform 0.2s;
   border: 1px solid #e5e7eb;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .race-card:hover {
@@ -562,6 +625,9 @@ const changePage = (page) => {
 
 .race-content {
   padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .race-title {
@@ -611,6 +677,11 @@ const changePage = (page) => {
 
 .pagination-number {
   font-weight: 500;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Responsive Design */
