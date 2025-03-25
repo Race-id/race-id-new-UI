@@ -24,7 +24,7 @@ const fetchRaces = async (page = 1) => {
   try {
     if (page === 1) {
       isLoading.value = true
-      races.value = [] // Reset races when starting fresh
+      races.value = [] 
     } else {
       isLoadingMore.value = true
     }
