@@ -1,90 +1,156 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
+import { useQuery } from "@tanstack/vue-query"
+import api from '@/components/services/api'
+import dayjs from 'dayjs'
 
 // State management
 const searchQuery = ref('')
 const selectedType = ref('')
 const selectedDate = ref('') 
 const selectedProvince = ref('')
-const isLoading = ref(true)
-const error = ref (null)
-
-const apiCurrentPage = ref(1)
-const apiTotalPages = ref(1)
-const isLoadingMore = ref(false)
-
 const currentPage = ref(1)
-const itemsPerPage = 12
-const races = ref([])
+const itemsPerPage = ref(12)
 
-// Fetch races from API
-const fetchRaces = async (page = 1) => {
-  try {
-    if (page === 1) {
-      isLoading.value = true
-      races.value = [] // Reset races when starting fresh
-    } else {
-      isLoadingMore.value = true
-    }
+const isQueryLoading = computed(() => pastEventsQuery.isLoading.value) 
 
-    const response = await fetch(`https://steelytoe.com/dev.titudev.com/api/v1/resources/event_public_header?page=${page}`)
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch races')
-    }
+const paginatedRaces = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredRaces.value.slice(start, end)
+})
 
-    const data = await response.json()
-    
-    // Assuming the API returns data in this format: { data: [], pagination: { current_page, total_pages } }
-    const racesList = Array.isArray(data.data) ? data.data : data || []
-    
-    // Update API pagination info
-    if (data.pagination) {
-      apiCurrentPage.value = data.pagination.current_page
-      apiTotalPages.value = data.pagination.total_pages
-    }
-    
-    // Get past races (dates before current date)
-    const currentDate = new Date()
-    const pastRaces = racesList.filter(race => {
-      const raceDate = new Date(race.evnhStartDate)
-      return raceDate < currentDate
-    }).map(race => ({
-      id: race.evnhId,
-      title: race.evnhName,
-      date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
-      location: race.evnhLocation,
-      image: race.evnhImage || '/images/placeholder.jpg',
-      startDate: race.evnhStartDate
-    }))
+const totalPages = computed(() => Math.ceil(filteredRaces.value.length / itemsPerPage.value))
 
-    // Sort past races by most recent first
-    pastRaces.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-    
-    // Append new races to existing ones
-    races.value = [...races.value, ...pastRaces]
-    
-    // If there are more pages and we have few past races, fetch next page
-    if (races.value.length < 12 && apiCurrentPage.value < apiTotalPages.value) {
-      await fetchRaces(page + 1)
-    }
-    
-  } catch (err) {
-    error.value = 'Failed to load races'
-    console.error('Error fetching races:', err)
-  } finally {
-    isLoading.value = false
-    isLoadingMore.value = false
+const resetFilters = () => {
+  selectedType.value = ''
+  selectedDate.value = ''
+  selectedProvince.value = ''
+  searchQuery.value = ''
+  currentPage.value = 1
+}
+
+// Helper function untuk format tanggal
+function formatDate(date) {
+  return dayjs(date).format('DD/MM/YYYY')
+}
+
+// Function untuk convert filter ke API params
+function filtersToApiQueryParams({
+  category = null,
+  startDate = null,
+  province = null,
+  search = null,
+}) {
+  const dateToApiFormat = (date) => {
+    return dayjs(date).format('YYYY-MM-DD 00:00:00')
+  };
+
+  const today = new Date()
+  
+  return {
+    "filter[evnhCategory]": category,
+    "filter[evnhProvince]": province,
+    "filter[evnhName][like]": search ? `%${search}%` : null,
+    "filter[evnhStartDate][<]": dateToApiFormat(today),
+    "filter[evnhStartDate][>=]": startDate ? dateToApiFormat(startDate) : null,
   }
 }
 
-const loadMore = async () => {
-  if (apiCurrentPage.value < apiTotalPages.value) {
-    await fetchRaces(apiCurrentPage.value + 1)
+// Fetch data from API
+const pastEventsQuery = useQuery({
+  queryKey: ['pastEvents', selectedType, selectedDate, selectedProvince, searchQuery],
+  queryFn: async () => {
+    try {
+      const countResponse = await api.get("/resources/event_public_header", {
+        params: {
+          pageNumber: 1,
+          pageSize: 1,
+          sort: "-evnhStartDate",
+          ...filtersToApiQueryParams({
+            category: selectedType.value,
+            startDate: selectedDate.value,
+            province: selectedProvince.value,
+            search: searchQuery.value
+          })
+        },
+        validateStatus: (status) => status < 500 // Allow 4xx errors to be handled
+      })
+
+      if (countResponse.status === 409) {
+        throw new Error('Session expired. Please refresh the page.')
+      }
+
+      if (!countResponse.data || !countResponse.data.status) {
+        throw new Error('Failed to fetch total records')
+      }
+
+      const totalRecords = countResponse.data.status.totalRecords
+
+      const fullResponse = await api.get("/resources/event_public_header", {
+        params: {
+          pageNumber: 1,
+          pageSize: totalRecords || 10,
+          sort: "-evnhStartDate",
+          ...filtersToApiQueryParams({
+            category: selectedType.value,
+            startDate: selectedDate.value,
+            province: selectedProvince.value,
+            search: searchQuery.value
+          })
+        },
+        validateStatus: (status) => status < 500
+      })
+
+      if (fullResponse.status === 409) {
+        throw new Error('Session expired. Please refresh the page.')
+      }
+
+      if (!fullResponse.data) {
+        throw new Error('Failed to fetch races')
+      }
+
+      return fullResponse.data
+    } catch (error) {
+      console.error('API Error:', error)
+      if (error.response?.status === 409) {
+        throw new Error('Session expired. Please refresh the page.')
+      }
+      throw new Error(error.message || 'Failed to fetch races')
+    }
+  },
+  staleTime: 5 * 60 * 1000,
+  retry: 1,
+  refetchOnWindowFocus: false
+})
+
+// Computed properties
+const races = computed(() => {
+  if (!pastEventsQuery.data.value?.data) {
+    return []
   }
-}
+  
+  const racesList = pastEventsQuery.data.value.data ?? []
+  return racesList.map(race => ({
+    id: race.evnhId,
+    title: race.evnhName,
+    date: formatDate(race.evnhStartDate),
+    location: race.evnhLocation,
+    image: race.evnhImage || '/images/placeholder.jpg',
+    category: race.evnhCategory,
+    province: race.evnhProvince
+  }))
+})
+
+// Update error computed property
+const queryError = computed(() => {
+  if (pastEventsQuery.error.value) {
+    return pastEventsQuery.error.value?.message || 'An error occurred while fetching data'
+  }
+  return null
+})
 
 const provinces = [
   'Aceh',
@@ -124,54 +190,40 @@ const provinces = [
 ]
 
 const filteredRaces = computed(() => {
-  let filtered = races.value
+  let filtered = races.value;
 
+  // Search filter
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
+    const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(race => 
       race.title.toLowerCase().includes(query) ||
       race.location.toLowerCase().includes(query)
-    )
+    );
   }
 
+  // Type/Category filter
+  if (selectedType.value) {
+    filtered = filtered.filter(race => 
+      race.category.toLowerCase() === selectedType.value.toLowerCase()
+    );
+  }
+
+  // Province filter
+  if (selectedProvince.value) {
+    filtered = filtered.filter(race => 
+      race.province === selectedProvince.value
+    );
+  }
+
+  // Date filter
   if (selectedDate.value) {
-    filtered = filtered.filter(race => race.date === selectedDate.value)
+    filtered = filtered.filter(race => 
+      dayjs(race.date, 'DD/MM/YYYY').isSame(dayjs(selectedDate.value), 'day')
+    );
   }
 
-  return filtered
-})
-
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const [year, month, day] = dateStr.split('-')
-  return `${day}/${month}/${year}`
-}
-
-// Methods
-const handleDateChange = (event) => {
-  const inputDate = event.target.value
-  selectedDate.value = formatDate(inputDate)
-}
-
-const resetFilters = () => {
-  selectedType.value = ''
-  selectedDate.value = ''
-  selectedProvince.value = ''
-  document.getElementById('date-input').value = '' // Reset the input value
-}
-
-const totalPages = computed(() => Math.ceil(filteredRaces.value.length / itemsPerPage))
-
-const paginatedRaces = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage
-  const end = start + itemsPerPage
-  return filteredRaces.value.slice(start, end)
-})
-
-onMounted(() => {
-  fetchRaces()
-})
+  return filtered;
+});
 
 </script>
 
@@ -252,14 +304,16 @@ onMounted(() => {
   
             <!-- Main Content Area -->
             <div class="main-content">
-              <div v-if="isLoading" class="loading-state">
+              <div v-if="isQueryLoading" class="loading-state">
                 <div class="loader"></div>
                 Loading races...
               </div>
               
-              <div v-else-if="error" class="error-state">
-                {{ error }}
-                <button @click="fetchRaces" class="retry-button">Retry</button>
+              <div v-else-if="queryError" class="error-state">
+                {{ queryError }}
+                <button @click="pastEventsQuery.refetch" class="retry-button">
+                  Retry
+                </button>
               </div>
   
               <div v-else class="races-container">
@@ -281,16 +335,6 @@ onMounted(() => {
                     </div>
                   </article>
                 </div>
-
-                <div v-if="apiCurrentPage < apiTotalPages" class="load-more-container">
-                    <button 
-                        @click="loadMore" 
-                        :disabled="isLoadingMore"
-                        class="load-more-button"
-                    >
-                        {{ isLoadingMore ? 'Loading...' : 'Load More Races' }}
-                    </button>
-                    </div>
   
                 <!-- Pagination -->
                 <div class="pagination">
