@@ -13,6 +13,16 @@ const selectedDate = ref('')
 const selectedProvince = ref('')
 const currentPage = ref(1)
 const itemsPerPage = ref(12)
+const isSessionExpired = ref(false)
+const token = ref(localStorage.getItem('token'))
+
+const refreshSession = async () => {
+  try {
+    window.location.reload()
+  } catch (error) {
+    console.error('Failed to refresh session:', error)
+  }
+}
 
 const isQueryLoading = computed(() => pastEventsQuery.isLoading.value) 
 
@@ -64,6 +74,11 @@ const pastEventsQuery = useQuery({
   queryKey: ['pastEvents', selectedType, selectedDate, selectedProvince, searchQuery],
   queryFn: async () => {
     try {
+      if (!token.value) {
+        isSessionExpired.value = true
+        throw new Error('No session token found')
+      }
+
       const countResponse = await api.get("/resources/event_public_header", {
         params: {
           pageNumber: 1,
@@ -76,54 +91,31 @@ const pastEventsQuery = useQuery({
             search: searchQuery.value
           })
         },
-        validateStatus: (status) => status < 500 // Allow 4xx errors to be handled
+        headers: {
+          'Authorization': `Bearer ${token.value}`
+        }
       })
 
+      // Handle 409 specifically
       if (countResponse.status === 409) {
-        throw new Error('Session expired. Please refresh the page.')
+        isSessionExpired.value = true
+        throw new Error('Session expired')
       }
 
-      if (!countResponse.data || !countResponse.data.status) {
-        throw new Error('Failed to fetch total records')
-      }
+      // ... rest of the fetching logic ...
 
-      const totalRecords = countResponse.data.status.totalRecords
-
-      const fullResponse = await api.get("/resources/event_public_header", {
-        params: {
-          pageNumber: 1,
-          pageSize: totalRecords || 10,
-          sort: "-evnhStartDate",
-          ...filtersToApiQueryParams({
-            category: selectedType.value,
-            startDate: selectedDate.value,
-            province: selectedProvince.value,
-            search: searchQuery.value
-          })
-        },
-        validateStatus: (status) => status < 500
-      })
-
-      if (fullResponse.status === 409) {
-        throw new Error('Session expired. Please refresh the page.')
-      }
-
-      if (!fullResponse.data) {
-        throw new Error('Failed to fetch races')
-      }
-
-      return fullResponse.data
     } catch (error) {
       console.error('API Error:', error)
       if (error.response?.status === 409) {
-        throw new Error('Session expired. Please refresh the page.')
+        isSessionExpired.value = true
+        throw new Error('Session expired')
       }
-      throw new Error(error.message || 'Failed to fetch races')
+      throw error
     }
   },
-  staleTime: 5 * 60 * 1000,
-  retry: 1,
-  refetchOnWindowFocus: false
+  retry: false,
+  refetchOnWindowFocus: false,
+  enabled: !!token.value // Only run query if token exists
 })
 
 // Computed properties
@@ -309,11 +301,25 @@ const filteredRaces = computed(() => {
                 Loading races...
               </div>
               
-              <div v-else-if="queryError" class="error-state">
-                {{ queryError }}
-                <button @click="pastEventsQuery.refetch" class="retry-button">
-                  Retry
-                </button>
+              <div v-else-if="queryError || isSessionExpired" class="error-state">
+                <div v-if="isSessionExpired" class="session-expired">
+                  <p>Your session has expired. Please refresh to continue.</p>
+                  <button 
+                    @click="refreshSession"
+                    class="refresh-button"
+                  >
+                    Refresh Page
+                  </button>
+                </div>
+                <div v-else>
+                  <p>{{ queryError }}</p>
+                  <button 
+                    @click="pastEventsQuery.refetch"
+                    class="retry-button"
+                  >
+                    Retry
+                  </button>
+                </div>
               </div>
   
               <div v-else class="races-container">
@@ -636,6 +642,29 @@ date-input::-webkit-datetime-edit-fields-wrapper {
 .race-date {
   font-size: 14px;
   color: #6b7280;
+}
+
+.session-expired {
+  text-align: center;
+  padding: 24px;
+  background: #fee2e2;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.refresh-button {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.refresh-button:hover {
+  background: #b91c1c;
 }
 
 .pagination {
