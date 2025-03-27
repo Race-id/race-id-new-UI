@@ -10,10 +10,20 @@ const selectedDate = ref('')
 const selectedProvince = ref('')
 const isLoading = ref(true)
 const error = ref (null)
+const showFirstEllipsis = computed(() => currentPage.value > 3)
+const showLastEllipsis = computed(() => currentPage.value < totalPages.value - 2)
+const showFirstInput = ref(false)
+const showLastInput = ref(false)
+const firstJumpInput = ref(null)
+const lastJumpInput = ref(null)
+const jumpToPage = ref('')
 
 const currentPage = ref(1)
 const itemsPerPage = 12
 const races = ref([])
+
+const startDate = ref('')
+const endDate = ref('')
 
 // Fetch races from API
 const fetchRaces = async () => {
@@ -42,9 +52,10 @@ const fetchRaces = async () => {
           id: race.evnhId,
           title: race.evnhName,
           date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
-          location: race.evnhLocation,
-          image: race.evnhImage || '/images/placeholder.jpg',
-          startDate: race.evnhStartDate
+          location: race.evnhPlace || 'Location TBA',
+          image: race.evnhThumbnail || '/images/placeholder.jpg',
+          startDate: race.evnhStartDate,
+          type: race.evnhType || '' // Add type from API
         })
       }
     })
@@ -62,6 +73,71 @@ const fetchRaces = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+const visiblePageNumbers = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const pages = []
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    if (current <= 4) {
+      for (let i = 2; i <= 5; i++) {
+        pages.push(i)
+      }
+    } else if (current >= total - 3) {
+      for (let i = total - 4; i < total; i++) {
+        pages.push(i)
+      }
+    } else {
+      for (let i = current - 2; i <= current + 2; i++) {
+        pages.push(i)
+      }
+    }
+  }
+  return pages
+})
+
+const handleJump = () => {
+  const page = parseInt(jumpToPage.value)
+  if (page && page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    jumpToPage.value = ''
+    showFirstInput.value = false
+    showLastInput.value = false
+  }
+}
+
+const toggleFirstInput = () => {
+  showFirstInput.value = !showFirstInput.value
+  showLastInput.value = false
+  if (showFirstInput.value) {
+    nextTick(() => {
+      firstJumpInput.value?.focus()
+    })
+  }
+}
+
+const toggleLastInput = () => {
+  showLastInput.value = !showLastInput.value
+  showFirstInput.value = false
+  if (showLastInput.value) {
+    nextTick(() => {
+      lastJumpInput.value?.focus()
+    })
+  }
+}
+
+const hideInputs = () => {
+  setTimeout(() => {
+    showFirstInput.value = false
+    showLastInput.value = false
+    jumpToPage.value = ''
+  }, 200)
 }
 
 const provinces = [
@@ -104,6 +180,7 @@ const provinces = [
 const filteredUpcomingRaces = computed(() => {
   let filtered = races.value
 
+  // Text search filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(race => 
@@ -112,8 +189,56 @@ const filteredUpcomingRaces = computed(() => {
     )
   }
 
+  // Type filter
+  if (selectedType.value) {
+    filtered = filtered.filter(race => 
+      race.type === selectedType.value
+    )
+  }
+
+  // Province filter
+  if (selectedProvince.value) {
+    filtered = filtered.filter(race => 
+      race.location.includes(selectedProvince.value)
+    )
+  }
+
+  // Date filter
   if (selectedDate.value) {
-    filtered = filtered.filter(race => race.date === selectedDate.value)
+    filtered = filtered.filter(race => {
+      const raceDate = new Date(race.startDate)
+      const filterDate = new Date(selectedDate.value)
+      return (
+        raceDate.getDate() === filterDate.getDate() &&
+        raceDate.getMonth() === filterDate.getMonth() &&
+        raceDate.getFullYear() === filterDate.getFullYear()
+      )
+    })
+  }
+
+  // Date range filter
+  if (startDate.value || endDate.value) {
+    filtered = filtered.filter(race => {
+      const raceDate = new Date(race.startDate)
+      raceDate.setHours(0, 0, 0, 0)  // Normalize race date
+
+      if (startDate.value && endDate.value) {
+        const start = new Date(startDate.value)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(endDate.value)
+        end.setHours(23, 59, 59, 999)  // Set to end of day
+        return raceDate >= start && raceDate <= end
+      } else if (startDate.value) {
+        const start = new Date(startDate.value)
+        start.setHours(0, 0, 0, 0)
+        return raceDate >= start
+      } else if (endDate.value) {
+        const end = new Date(endDate.value)
+        end.setHours(23, 59, 59, 999)
+        return raceDate <= end
+      }
+      return true
+    })
   }
 
   return filtered
@@ -126,16 +251,29 @@ const formatDate = (dateStr) => {
 }
 
 // Methods
-const handleDateChange = (event) => {
-  const inputDate = event.target.value
-  selectedDate.value = formatDate(inputDate)
+const handleDateChange = () => {
+  console.log('Date change - Start:', startDate.value, 'End:', endDate.value)
+  
+  if (startDate.value && endDate.value) {
+    const start = new Date(startDate.value)
+    const end = new Date(endDate.value)
+
+    if (end < start) {
+      console.warn('End date cannot be earlier than start date')
+      endDate.value = startDate.value
+    }
+  }
+  
+  currentPage.value = 1 // Reset to page 1
 }
 
 const resetFilters = () => {
+  searchQuery.value = ''
   selectedType.value = ''
   selectedDate.value = ''
   selectedProvince.value = ''
-  document.getElementById('date-input').value = '' // Reset the input value
+  currentPage.value = 1 // Reset to first page after filtering
+  document.getElementById('date-input').value = '' // Reset date input
 }
 
 const totalPages = computed(() => Math.ceil(filteredUpcomingRaces.value.length / itemsPerPage))
@@ -213,13 +351,31 @@ onMounted(() => {
                   <i class="fas fa-chevron-down select-arrow"></i>
                 </div>
   
-                <label for="date-input" class="filter-label">Date</label>
-                <input
-                  type="date"
-                  id="date-input"
-                  class="date-input"
-                  v-model="selectedDate"
-                />
+                <!-- Replace single date input with date range -->
+                <label class="filter-label">Date Range</label>
+                <div class="date-range">
+                  <div class="date-field">
+                    <label for="start-date" class="date-label">From</label>
+                    <input
+                      type="date"
+                      id="start-date"
+                      class="date-input"
+                      v-model="startDate"
+                      @change="handleDateChange"
+                    />
+                  </div>
+                  <div class="date-field">
+                    <label for="end-date" class="date-label">To</label>
+                    <input
+                      type="date"
+                      id="end-date"
+                      class="date-input"
+                      v-model="endDate"
+                      @change="handleDateChange"
+                      :min="startDate"
+                    />
+                  </div>
+                </div>
   
                 <button class="reset-button" @click="resetFilters">
                   Reset Filter
@@ -262,22 +418,95 @@ onMounted(() => {
                 <!-- Pagination -->
                 <div class="pagination">
                   <span class="pagination-info">
-                    Page {{ currentPage }} of {{ totalPages || 1 }}
+                    Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - 
+                    {{ Math.min(currentPage * itemsPerPage, filteredUpcomingRaces.length) }} 
+                    of {{ filteredUpcomingRaces.length }} races
                   </span>
                   <div class="pagination-controls" v-if="totalPages > 1">
+                    <!-- Previous button -->
                     <button 
+                      class="pagination-button"
                       :disabled="currentPage === 1"
-                      @click="currentPage--"
-                      class="pagination-button"
+                      @click="prevPage"
                     >
-                      Previous
+                      &lt;
                     </button>
+                
+                    <!-- First page -->
                     <button 
-                      :disabled="currentPage === totalPages"
-                      @click="currentPage++"
-                      class="pagination-button"
+                      class="pagination-number"
+                      :class="{ active: currentPage === 1 }"
+                      @click="goToPage(1)"
                     >
-                      Next
+                      1
+                    </button>
+                
+                    <!-- First ellipsis with input -->
+                    <div class="pagination-jump" v-if="showFirstEllipsis">
+                      <span 
+                        class="pagination-ellipsis"
+                        @click="toggleFirstInput"
+                      >...</span>
+                      <input 
+                        v-if="showFirstInput"
+                        v-model="jumpToPage"
+                        type="number"
+                        class="jump-input"
+                        :min="2"
+                        :max="visiblePageNumbers[0] - 1"
+                        @keyup.enter="handleJump"
+                        @blur="hideInputs"
+                        ref="firstJumpInput"
+                      />
+                    </div>
+                
+                    <!-- Middle pages -->
+                    <button 
+                      v-for="pageNumber in visiblePageNumbers"
+                      :key="pageNumber"
+                      class="pagination-number"
+                      :class="{ active: currentPage === pageNumber }"
+                      @click="goToPage(pageNumber)"
+                    >
+                      {{ pageNumber }}
+                    </button>
+                
+                    <!-- Last ellipsis with input -->
+                    <div class="pagination-jump" v-if="showLastEllipsis">
+                      <span 
+                        class="pagination-ellipsis"
+                        @click="toggleLastInput"
+                      >...</span>
+                      <input 
+                        v-if="showLastInput"
+                        v-model="jumpToPage"
+                        type="number"
+                        class="jump-input"
+                        :min="visiblePageNumbers[visiblePageNumbers.length - 1] + 1"
+                        :max="totalPages - 1"
+                        @keyup.enter="handleJump"
+                        @blur="hideInputs"
+                        ref="lastJumpInput"
+                      />
+                    </div>
+                
+                    <!-- Last page -->
+                    <button 
+                      v-if="totalPages > 1"
+                      class="pagination-number"
+                      :class="{ active: currentPage === totalPages }"
+                      @click="goToPage(totalPages)"
+                    >
+                      {{ totalPages }}
+                    </button>
+                
+                    <!-- Next button -->
+                    <button 
+                      class="pagination-button"
+                      :disabled="currentPage === totalPages"
+                      @click="nextPage"
+                    >
+                      &gt;
                     </button>
                   </div>
                 </div>
@@ -597,6 +826,75 @@ date-input::-webkit-datetime-edit-fields-wrapper {
 
 .pagination-button:not(:disabled):hover {
   background: #4c62c8;
+}
+
+.pagination-number {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-number.active {
+  background: #617afa;
+  color: white;
+  border-color: #617afa;
+}
+
+.pagination-ellipsis {
+  color: #6b7280;
+  padding: 0 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.pagination-jump {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.jump-input {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 14px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.date-range {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.date-label {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 @keyframes spin {
