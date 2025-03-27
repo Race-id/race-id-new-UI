@@ -4,15 +4,13 @@ import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
 import { useRouter } from 'vue-router'
 
-// State management
+// State management (simplified)
 const searchQuery = ref('')
-const selectedType = ref('')
-const selectedDate = ref('') 
-const selectedProvince = ref('')
 const isLoading = ref(true)
-const error = ref (null)
+const error = ref(null)
 const router = useRouter()
 
+// Navigation functions
 const goToUpcomingEvents = () => {
   router.push('/upcoming-events')
 }
@@ -85,92 +83,30 @@ const fetchRaces = async () => {
   }
 }
 
-const provinces = [
-  'Aceh',
-  'Sumatera Utara',
-  'Sumatera Barat',
-  'Riau',
-  'Kepulauan Riau',
-  'Jambi',
-  'Sumatera Selatan',
-  'Kepulauan Bangka Belitung',
-  'Bengkulu',
-  'Lampung',
-  'DKI Jakarta',
-  'Banten',
-  'Jawa Barat',
-  'Jawa Tengah',
-  'DI Yogyakarta',
-  'Jawa Timur',
-  'Bali',
-  'Nusa Tenggara Barat',
-  'Nusa Tenggara Timur',
-  'Kalimantan Barat',
-  'Kalimantan Tengah',
-  'Kalimantan Selatan',
-  'Kalimantan Timur',
-  'Kalimantan Utara',
-  'Sulawesi Utara',
-  'Gorontalo',
-  'Sulawesi Tengah',
-  'Sulawesi Barat',
-  'Sulawesi Selatan',
-  'Sulawesi Tenggara',
-  'Maluku',
-  'Maluku Utara',
-  'Papua',
-  'Papua Barat'
-]
-
+// Simplified computed properties
 const filteredUpcomingRaces = computed(() => {
-  let filtered = races.value
+  if (!searchQuery.value) return races.value
 
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(race => 
-      race.title.toLowerCase().includes(query) ||
-      race.location.toLowerCase().includes(query)
-    )
-  }
-
-  if (selectedDate.value) {
-    filtered = filtered.filter(race => race.date === selectedDate.value)
-  }
-
-  return filtered
+  const query = searchQuery.value.toLowerCase()
+  return races.value.filter(race => 
+    race.title.toLowerCase().includes(query) ||
+    race.location.toLowerCase().includes(query)
+  )
 })
 
 const filteredPastRaces = computed(() => {
   if (!searchQuery.value) return pastRaces.value
 
   const query = searchQuery.value.toLowerCase()
-  return pastRaces.value.filter(race => {
-    return race.title.toLowerCase().includes(query) ||
-      race.location.toLowerCase().includes(query)
-  })
+  return pastRaces.value.filter(race => 
+    race.title.toLowerCase().includes(query) ||
+    race.location.toLowerCase().includes(query)
+  )
 })
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const [year, month, day] = dateStr.split('-')
-  return `${day}/${month}/${year}`
-}
 
 // Methods
 const handleSearch = () => {
   console.log('Searching for:', searchQuery.value)
-}
-
-const handleDateChange = (event) => {
-  const inputDate = event.target.value
-  selectedDate.value = formatDate(inputDate)
-}
-
-const resetFilters = () => {
-  selectedType.value = ''
-  selectedDate.value = ''
-  selectedProvince.value = ''
-  document.getElementById('date-input').value = '' // Reset the input value
 }
 
 onMounted(() => {
@@ -188,33 +124,21 @@ onMounted(() => {
         <h1 class="title">Find Your Next Race</h1>
         <div class="search-container">
           <div class="search-input-container">
-          <input 
-            v-model="searchQuery"
-            type="text" 
-            placeholder="Search races by name or location" 
-            class="search-input"
-            @keyup.enter="handleSearch"
-          />
-          <button 
-            v-show="searchQuery" 
-            class="clear-button" 
-            @click="clearSearch"
-            type="button"
-          >
-          <i class="fas fa-times"></i>
-
-          <div v-if="isLoading" class="loading-state">
-        <div class="loader"></div>
-        Loading races...
-      </div>
-      
-      <div v-else-if="error" class="error-state">
-        {{ error }}
-        <button @click="fetchRaces" class="retry-button">
-          Retry
-        </button>
-      </div>
-        </button>
+            <input 
+              v-model="searchQuery"
+              type="text" 
+              placeholder="Search races by name or location" 
+              class="search-input"
+              @keyup.enter="handleSearch"
+            />
+            <button 
+              v-show="searchQuery" 
+              class="clear-button" 
+              @click="searchQuery = ''"
+              type="button"
+            >
+              <i class="fas fa-times"></i>
+            </button>
           </div>
         </div>
       </header>
@@ -222,63 +146,7 @@ onMounted(() => {
       <!-- Main Content -->
       <div class="content">
         <div class="content-row">
-          <!-- Filter Section -->
-          <aside class="filter-column">
-            <div class="filter-container">
-              <label for="type-select" class="filter-label">Type</label>
-              <div class="select-container">
-                <select 
-                  id="type-select" 
-                  v-model="selectedType"
-                  class="filter-select"
-                >
-                  <option value="">Select Type</option>
-                  <option value="ultra">Ultra</option>
-                  <option value="marathon">Marathon</option>
-                  <option value="half-marathon">Half Marathon</option>
-                  <option value="10k">10K</option>
-                  <option value="5k">5K</option>
-                </select>
-                <i class="fas fa-chevron-down select-arrow"></i>
-              </div>
-
-               <!-- Add Province Filter -->
-              <label for="province-select" class="filter-label">Province</label>
-                <div class="select-container">
-                <select 
-                  id="province-select" 
-                  v-model="selectedProvince"
-                  class="filter-select"
-                >
-                  <option value="">Select Province</option>
-                  <option 
-                    v-for="province in provinces" 
-                    :key="province" 
-                    :value="province"
-                  >
-                    {{ province }}
-                  </option>
-                </select>
-                <i class="fas fa-chevron-down select-arrow"></i>
-              </div>
-
-              <label for="date-input" class="filter-label">Date</label>
-              <input
-              type="date"
-              id="date-input"
-              class="date-input"
-              @input="handleDateChange"
-              :value="selectedDate ? selectedDate.split('/').reverse().join('-') : ''"
-              placeholder="DD/MM/YYYY"
-              />
-
-              <button class="reset-button" @click="resetFilters">
-                Reset Filter
-              </button>
-            </div>
-          </aside>
-
-          <!-- Main Content Area -->
+          <!-- Main Content Area (now full width) -->
           <div class="main-content">
             <!-- Upcoming Races Section -->
             <section class="races-section">
@@ -457,106 +325,14 @@ onMounted(() => {
 }
 
 .content-row {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 32px;
-  align-items: start;
-}
-
-.filter-column {
-  background: #fff;
-  border-radius: 8px;
-  padding: 24px;
-  border: 1px solid #e5e7eb;
-}
-
-.filter-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.filter-label {
-  font-size: 16px;
-  font-weight: 500;
-  color: #1c1c21;
-}
-
-.select-container {
-  position: relative;
-}
-
-.filter-select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 16px;
-  background: #fff;
-  appearance: none;
-  color: #1c1c21;
-}
-
-.select-arrow {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  color: #3d404a;
-  pointer-events: none;
-}
-
-.date-input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 16px;
-  color: #1c1c21;
-}
-
-.date-input::-webkit-datetime-edit,
-.date-input::-webkit-inner-spin-button,
-.date-input::-webkit-calendar-picker-indicator {
-  color: #1c1c21;
-}
-
-date-input::-webkit-datetime-edit-fields-wrapper {
-  padding: 0;
-}
-
-.date-input::-webkit-datetime-edit-text {
-  padding: 0 4px;
-}
-
-.date-input::-webkit-datetime-edit-month-field,
-.date-input::-webkit-datetime-edit-day-field,
-.date-input::-webkit-datetime-edit-year-field {
-  padding: 0;
-}
-
-.reset-button {
-  width: 100%;
-  padding: 12px;
-  background: #617afa;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.reset-button:hover {
-  background: #4c62c8;
+  display: block;
 }
 
 .main-content {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  max-width: 100%;
 }
 
 .races-section {
@@ -728,10 +504,6 @@ date-input::-webkit-datetime-edit-fields-wrapper {
 @media (max-width: 480px) {
   .featured-image {
     height: 200px;
-  }
-
-  .filter-column {
-    padding: 16px;
   }
 
   .races-section {
