@@ -4,6 +4,7 @@ import Footer from "@/components/footer.vue";
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
+
 const images = ref([
   '/images/Hero banner 1.jpg',
   '/images/Hero banner 2.jpg',
@@ -14,6 +15,10 @@ const router = useRouter();
 const goToRacePage = () => {
   router.push('/race');
 }
+
+const featuredEvents = ref([])
+const isLoadingEvents = ref(true)
+const errorEvents = ref(null)
 
 const currentImageIndex = ref(0);
 
@@ -35,6 +40,70 @@ const setupIntersectionObserver = () => {
     observer.observe(el);
   });
 };
+
+const fetchFeaturedEvents = async () => {
+  try {
+    console.log('Starting to fetch events...')
+    isLoadingEvents.value = true
+
+    // Get today's date at midnight
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const formattedDate = formatAPIDate(today)
+    
+    // Update URL format and add headers
+    const url = `https://steelytoe.com/dev.titudev.com/api/v1/resources/event_public_header`
+    const params = new URLSearchParams({
+      'sort': 'evnhStartDate',
+      'filter[evnhStartDate][>=]': formattedDate
+    })
+    
+    console.log('Fetching from URL:', `${url}?${params}`)
+    
+    const response = await fetch(`${url}?${params}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        // Add any other required headers here
+      }
+    })
+    
+    if (!response.ok) {
+      console.error('Response status:', response.status)
+      console.error('Response text:', await response.text())
+      throw new Error('Failed to fetch events')
+    }
+
+    const data = await response.json()
+    console.log('Raw API response:', data)
+
+    // Take first 3 upcoming events
+    featuredEvents.value = (data.data || [])
+      .slice(0, 3)
+      .map(event => ({
+        id: event.evnhId,
+        title: event.evnhName,  
+        image: event.evnhThumbnail || '/images/placeholder.jpg',
+        date: new Date(event.evnhStartDate).toLocaleDateString('en-GB'),
+        location: event.evnhPlace || 'Location TBA'
+      }))
+
+    console.log('Processed featured events:', featuredEvents.value)
+
+  } catch (err) {
+    console.error('Error fetching events:', err)
+    errorEvents.value = 'Failed to load events'
+  } finally {
+    isLoadingEvents.value = false
+  }
+}
+
+// Helper function to format date for API
+const formatAPIDate = (date) => {
+  return date.toISOString().split('T')[0]
+}
 
 const reviews = ref ([
   {
@@ -104,6 +173,7 @@ onMounted(() => {
   setInterval(nextImage, 4000);
   setInterval(nextReview, 3000);
   setupIntersectionObserver();
+  fetchFeaturedEvents();
 });
 </script>
 
@@ -188,50 +258,42 @@ onMounted(() => {
             Explore upcoming marathons and races near you.
           </p>
         </header>
-        <div class="event-cards">
-          <!-- Event Card 1 -->
-          <article class="event-card">
+        
+        <div v-if="isLoadingEvents" class="loading-state">
+          <p>Loading events...</p>
+        </div>
+        
+        <div v-else-if="errorEvents" class="error-state">
+          <p>{{ errorEvents }}</p>
+        </div>
+        
+        <div v-else-if="featuredEvents.length === 0" class="empty-state">
+          <p>No upcoming events found</p>
+        </div>
+        
+        <div v-else class="event-cards">
+          <article 
+            v-for="event in featuredEvents" 
+            :key="event.id"
+            class="event-card"
+          >
             <img
-              src="https://cdn.builder.io/api/v1/image/assets/TEMP/08d0ab485cc1814120cd7772c2c2c2346b87effd"
-              alt="Jakarta Marathon"
+              :src="event.image"
+              :alt="event.title"
               class="event-image"
             />
             <div class="event-content">
-              <h3 class="event-title">Jakarta Marathon</h3>
-              <p class="event-description">
-                Experience the vibrant capital in a unique running event.
+              <h3 class="event-title">{{ event.title }}</h3>
+              <p class="event-date">
+                <i class="fas fa-calendar"></i>
+                {{ event.date }}
               </p>
-            </div>
-          </article>
-  
-          <!-- Event Card 2 -->
-          <article class="event-card">
-            <img
-              src="https://cdn.builder.io/api/v1/image/assets/TEMP/5c2a8cbbf5df9ce92fc715639482380b6400c2b1"
-              alt="Bali Beach Run"
-              class="event-image"
-            />
-            <div class="event-content">
-              <h3 class="event-title">Bali Beach Run</h3>
-              <p class="event-description">
-                Sprint along the beautiful beaches of Bali in this scenic run.
+              <p class="event-location">
+                <i class="fas fa-map-marker-alt"></i>
+                {{ event.location || 'Location TBA' }}
               </p>
-            </div>
-          </article>
-  
-          <!-- Event Card 3 -->
-          <article class="event-card">
-            <img
-              src="https://cdn.builder.io/api/v1/image/assets/TEMP/dfe65c20cae7b65537242c1498c938ae3bb6b743"
-              alt="Bandung City Dash"
-              class="event-image"
-            />
-            <div class="event-content">
-              <h3 class="event-title">Bandung City Dash</h3>
-              <p class="event-description">
-                Run through the cool highlands of Bandung and enjoy the city's
-                views.
-              </p>
+              <p class="event-description">{{ event.description }}</p>
+              <button class="event-button">View Details</button>
             </div>
           </article>
         </div>
@@ -652,6 +714,56 @@ onMounted(() => {
     line-height: 21px;
     margin: 0;
   }
+
+  .loading-state,
+.error-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.event-date,
+.event-location {
+  color: #6b7280;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.event-date i,
+.event-location i {
+  font-size: 16px;
+  color: #04a3e6;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.event-button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: #04a3e6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.event-button:hover {
+  background: #283f95;
+}
   
   /* Articles Section */
   .articles-section {
