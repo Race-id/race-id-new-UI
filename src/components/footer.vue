@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
 
 const currentYear = computed(() => {
   return new Date().getFullYear();
@@ -21,19 +22,23 @@ const currentYear = computed(() => {
         <div class="footer-grid">
           <div class="footer-column">
             <h3>Events</h3>
-            <ul>
-              <li><a href="#">Upcoming Races</a></li>
-              <li><a href="#">Past Events</a></li>
-              <li><a href="#">Virtual Runs</a></li>
-            </ul>
+          <ul>
+            <li>
+              <router-link to="/upcoming-events">Upcoming Races</router-link>
+            </li>
+            <li>
+              <router-link to="/past-events">Past Events</router-link>
+            </li>
+          </ul>
           </div>
 
           <div class="footer-column">
             <h3>Support</h3>
             <ul>
-              <li><a href="#">Contact Us</a></li>
-              <li><a href="#">FAQ</a></li>
-              <li><a href="#">Help Center</a></li>
+              <li><router-link to="/faq">FAQ</router-link>
+              </li>
+              <li><router-link to="/about-us">About Us</router-link>
+              </li>
             </ul>
           </div>
         </div>
