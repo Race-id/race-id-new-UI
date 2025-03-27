@@ -8,6 +8,8 @@ const searchQuery = ref('')
 const selectedType = ref('')
 const selectedDate = ref('') 
 const selectedProvince = ref('')
+const startDate = ref('')
+const endDate = ref('')
 const isLoading = ref(true)
 const error = ref (null)
 const showFirstEllipsis = computed(() => currentPage.value > 3)
@@ -67,8 +69,8 @@ const fetchRaces = async () => {
       id: race.evnhId,
       title: race.evnhName,
       date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
-      location: race.evnhLocation,
-      image: race.evnhImage || '/images/placeholder.jpg',
+      location: race.evnhPlace,
+      image: race.evnhThumbnail || '/images/placeholder.jpg',
       startDate: race.evnhStartDate
     }))
 
@@ -130,8 +132,29 @@ const filteredPastRaces = computed(() => {
     )
   }
 
-  if (selectedDate.value) {
-    filtered = filtered.filter(race => race.date === selectedDate.value)
+  // Update filter tanggal dengan normalisasi
+  if (startDate.value || endDate.value) {
+    filtered = filtered.filter(race => {
+      const raceDate = new Date(race.startDate)
+      raceDate.setHours(0, 0, 0, 0)  // Normalize race date
+
+      if (startDate.value && endDate.value) {
+        const start = new Date(startDate.value)
+        start.setHours(0, 0, 0, 0)
+        const end = new Date(endDate.value)
+        end.setHours(23, 59, 59, 999)  // Set to end of day
+        return raceDate >= start && raceDate <= end
+      } else if (startDate.value) {
+        const start = new Date(startDate.value)
+        start.setHours(0, 0, 0, 0)
+        return raceDate >= start
+      } else if (endDate.value) {
+        const end = new Date(endDate.value)
+        end.setHours(23, 59, 59, 999)
+        return raceDate <= end
+      }
+      return true
+    })
   }
 
   if (selectedProvince.value) {
@@ -143,17 +166,30 @@ const filteredPastRaces = computed(() => {
   return filtered
 })
 
-// Methods
-const handleDateChange = (event) => {
-  selectedDate.value = event.target.value 
+const handleDateChange = () => {
+  console.log('Date change - Start:', startDate.value, 'End:', endDate.value)
+  
+  if (startDate.value && endDate.value) {
+    const start = new Date(startDate.value)
+    const end = new Date(endDate.value)
+
+    if (end < start) {
+      console.warn('End date cannot be earlier than start date')
+      endDate.value = startDate.value
+    }
+  }
+  
+  currentPage.value = 1 // Reset ke halaman 1
+  console.log('Filtered races count:', filteredPastRaces.value.length)
 }
 
 const resetFilters = () => {
-searchQuery.value = ''
+  searchQuery.value = ''
   selectedType.value = ''
-  selectedDate.value = ''
+  startDate.value = ''
+  endDate.value = ''
   selectedProvince.value = ''
-  document.getElementById('date-input').value = '' 
+  currentPage.value = 1
 }
 
 const totalPages = computed(() => Math.ceil(filteredPastRaces.value.length / itemsPerPage))
@@ -310,13 +346,31 @@ onMounted(() => {
                   <i class="fas fa-chevron-down select-arrow"></i>
                 </div>
   
-                <label for="date-input" class="filter-label">Date</label>
-                <input
-                  type="date"
-                  id="date-input"
-                  class="date-input"
-                  v-model="selectedDate"
-                />
+                <!-- Update bagian filter tanggal -->
+                <label class="filter-label">Date Range</label>
+                <div class="date-range">
+                  <div class="date-field">
+                    <label for="start-date" class="date-label">From</label>
+                    <input
+                      type="date"
+                      id="start-date"
+                      class="date-input"
+                      v-model="startDate"
+                      @change="handleDateChange"
+                    />
+                  </div>
+                  <div class="date-field">
+                    <label for="end-date" class="date-label">To</label>
+                    <input
+                      type="date"
+                      id="end-date"
+                      class="date-input"
+                      v-model="endDate"
+                      @change="handleDateChange"
+                      :min="startDate"
+                    />
+                  </div>
+                </div>
   
                 <button class="reset-button" @click="resetFilters">
                   Reset Filter
@@ -603,6 +657,23 @@ onMounted(() => {
   font-size: 14px;
   color: #3d404a;
   pointer-events: none;
+}
+
+.date-range {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.date-label {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .date-input {
