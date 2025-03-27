@@ -1,148 +1,86 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
-import { useQuery } from "@tanstack/vue-query"
-import api from '@/components/services/api'
-import dayjs from 'dayjs'
 
 // State management
 const searchQuery = ref('')
 const selectedType = ref('')
 const selectedDate = ref('') 
 const selectedProvince = ref('')
+const isLoading = ref(true)
+const error = ref (null)
+const showFirstEllipsis = computed(() => currentPage.value > 3)
+const showLastEllipsis = computed(() => currentPage.value < totalPages.value - 2)
+const showFirstInput = ref(false)
+const showLastInput = ref(false)
+const firstJumpInput = ref(null)
+const lastJumpInput = ref(null)
+
 const currentPage = ref(1)
-const itemsPerPage = ref(12)
-const isSessionExpired = ref(false)
-const token = ref(localStorage.getItem('token'))
+const itemsPerPage = 12
+const races = ref([])
 
-const refreshSession = async () => {
+// State for input jump page
+const jumpToPage = ref('')
+
+// Handler untuk jump page
+const handleJump = () => {
+  const page = parseInt(jumpToPage.value)
+  if (page && page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    jumpToPage.value = ''
+    showFirstInput.value = false
+    showLastInput.value = false
+  }
+}
+
+// Fetch races from API
+const fetchRaces = async () => {
   try {
-    window.location.reload()
-  } catch (error) {
-    console.error('Failed to refresh session:', error)
-  }
-}
-
-const isQueryLoading = computed(() => pastEventsQuery.isLoading.value) 
-
-const paginatedRaces = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value
-  const end = start + itemsPerPage.value
-  return filteredRaces.value.slice(start, end)
-})
-
-const totalPages = computed(() => Math.ceil(filteredRaces.value.length / itemsPerPage.value))
-
-const resetFilters = () => {
-  selectedType.value = ''
-  selectedDate.value = ''
-  selectedProvince.value = ''
-  searchQuery.value = ''
-  currentPage.value = 1
-}
-
-// Helper function untuk format tanggal
-function formatDate(date) {
-  return dayjs(date).format('DD/MM/YYYY')
-}
-
-// Function untuk convert filter ke API params
-function filtersToApiQueryParams({
-  category = null,
-  startDate = null,
-  province = null,
-  search = null,
-}) {
-  const dateToApiFormat = (date) => {
-    return dayjs(date).format('YYYY-MM-DD 00:00:00')
-  };
-
-  const today = new Date()
-  
-  return {
-    "filter[evnhCategory]": category,
-    "filter[evnhProvince]": province,
-    "filter[evnhName][like]": search ? `%${search}%` : null,
-    "filter[evnhStartDate][<]": dateToApiFormat(today),
-    "filter[evnhStartDate][>=]": startDate ? dateToApiFormat(startDate) : null,
-  }
-}
-
-// Fetch data from API
-const pastEventsQuery = useQuery({
-  queryKey: ['pastEvents', selectedType, selectedDate, selectedProvince, searchQuery],
-  queryFn: async () => {
-    try {
-      if (!token.value) {
-        isSessionExpired.value = true
-        throw new Error('No session token found')
-      }
-
-      const countResponse = await api.get("/resources/event_public_header", {
-        params: {
-          pageNumber: 1,
-          pageSize: 1,
-          sort: "-evnhStartDate",
-          ...filtersToApiQueryParams({
-            category: selectedType.value,
-            startDate: selectedDate.value,
-            province: selectedProvince.value,
-            search: searchQuery.value
-          })
-        },
-        headers: {
-          'Authorization': `Bearer ${token.value}`
-        }
-      })
-
-      // Handle 409 specifically
-      if (countResponse.status === 409) {
-        isSessionExpired.value = true
-        throw new Error('Session expired')
-      }
-
-      // ... rest of the fetching logic ...
-
-    } catch (error) {
-      console.error('API Error:', error)
-      if (error.response?.status === 409) {
-        isSessionExpired.value = true
-        throw new Error('Session expired')
-      }
-      throw error
+    isLoading.value = true
+    const response = await fetch('https://steelytoe.com/dev.titudev.com/api/v1/resources/event_public_header?pageSize=9999&sort=evnhStartDate&pageNumber=1')
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch races')
     }
-  },
-  retry: false,
-  refetchOnWindowFocus: false,
-  enabled: !!token.value // Only run query if token exists
-})
 
-// Computed properties
-const races = computed(() => {
-  if (!pastEventsQuery.data.value?.data) {
-    return []
-  }
-  
-  const racesList = pastEventsQuery.data.value.data ?? []
-  return racesList.map(race => ({
-    id: race.evnhId,
-    title: race.evnhName,
-    date: formatDate(race.evnhStartDate),
-    location: race.evnhLocation,
-    image: race.evnhImage || '/images/placeholder.jpg',
-    category: race.evnhCategory,
-    province: race.evnhProvince
-  }))
-})
+    const data = await response.json()
+    console.log('Raw API response:', data)
+    
+    const racesList = Array.isArray(data) ? data : data.data || []
+    console.log('Processed racesList:', racesList.length)
+    
+    const currentDate = new Date()
+    currentDate.setHours(0, 0, 0, 0)
+    
+    // Filter past events
+    const pastEvents = racesList.filter(race => {
+      const raceDate = new Date(race.evnhStartDate)
+      raceDate.setHours(0, 0, 0, 0)
+      return raceDate < currentDate
+    }).sort((a, b) => new Date(b.evnhStartDate) - new Date(a.evnhStartDate)) // Sort descending
 
-// Update error computed property
-const queryError = computed(() => {
-  if (pastEventsQuery.error.value) {
-    return pastEventsQuery.error.value?.message || 'An error occurred while fetching data'
+    console.log('Filtered past events:', pastEvents.length)
+    
+    races.value = pastEvents.map(race => ({
+      id: race.evnhId,
+      title: race.evnhName,
+      date: new Date(race.evnhStartDate).toLocaleDateString('en-GB'),
+      location: race.evnhLocation,
+      image: race.evnhImage || '/images/placeholder.jpg',
+      startDate: race.evnhStartDate
+    }))
+
+    console.log('Final processed races:', races.value.length)
+    
+  } catch (err) {
+    error.value = 'Gagal memuat data lomba'
+    console.error('Error fetching races:', err)
+  } finally {
+    isLoading.value = false
   }
-  return null
-})
+}
 
 const provinces = [
   'Aceh',
@@ -181,41 +119,133 @@ const provinces = [
   'Papua Barat'
 ]
 
-const filteredRaces = computed(() => {
-  let filtered = races.value;
+const filteredPastRaces = computed(() => {
+  let filtered = races.value
 
-  // Search filter
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
+    const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(race => 
       race.title.toLowerCase().includes(query) ||
       race.location.toLowerCase().includes(query)
-    );
+    )
   }
 
-  // Type/Category filter
-  if (selectedType.value) {
-    filtered = filtered.filter(race => 
-      race.category.toLowerCase() === selectedType.value.toLowerCase()
-    );
-  }
-
-  // Province filter
-  if (selectedProvince.value) {
-    filtered = filtered.filter(race => 
-      race.province === selectedProvince.value
-    );
-  }
-
-  // Date filter
   if (selectedDate.value) {
-    filtered = filtered.filter(race => 
-      dayjs(race.date, 'DD/MM/YYYY').isSame(dayjs(selectedDate.value), 'day')
-    );
+    filtered = filtered.filter(race => race.date === selectedDate.value)
   }
 
-  return filtered;
-});
+  if (selectedProvince.value) {
+    filtered = filtered.filter(race =>
+      race.location.includes(selectedProvince.value)
+    )
+  }
+
+  return filtered
+})
+
+// Methods
+const handleDateChange = (event) => {
+  selectedDate.value = event.target.value 
+}
+
+const resetFilters = () => {
+searchQuery.value = ''
+  selectedType.value = ''
+  selectedDate.value = ''
+  selectedProvince.value = ''
+  document.getElementById('date-input').value = '' 
+}
+
+const totalPages = computed(() => Math.ceil(filteredPastRaces.value.length / itemsPerPage))
+
+const paginatedRaces = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredPastRaces.value.slice(start, end)
+})
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const visiblePageNumbers = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const pages = []
+
+  if (total <= 7) {
+    // Jika total halaman 7 atau kurang, tampilkan semua
+    for (let i = 1; i <= total; i++) {
+      pages.push(i)
+    }
+  } else {
+    // Selalu tampilkan 5 halaman, tapi skip halaman 1 karena sudah ditampilkan terpisah
+    if (current <= 4) {
+      // Awal: skip 1, mulai dari 2
+      for (let i = 2; i <= 5; i++) {
+        pages.push(i)
+      }
+    } else if (current >= total - 3) {
+      // Akhir
+      for (let i = total - 4; i < total; i++) {
+        pages.push(i)
+      }
+    } else {
+      // Tengah
+      for (let i = current - 2; i <= current + 2; i++) {
+        pages.push(i)
+      }
+    }
+  }
+
+  return pages
+})
+
+const toggleFirstInput = () => {
+  showFirstInput.value = !showFirstInput.value
+  showLastInput.value = false
+  if (showFirstInput.value) {
+    nextTick(() => {
+      firstJumpInput.value?.focus()
+    })
+  }
+}
+
+const toggleLastInput = () => {
+  showLastInput.value = !showLastInput.value
+  showFirstInput.value = false
+  if (showLastInput.value) {
+    nextTick(() => {
+      lastJumpInput.value?.focus()
+    })
+  }
+}
+
+const hideInputs = () => {
+  setTimeout(() => {
+    showFirstInput.value = false
+    showLastInput.value = false
+    jumpToPage.value = ''
+  }, 200)
+}
+
+onMounted(() => {
+  fetchRaces()
+})
 
 </script>
 
@@ -296,30 +326,14 @@ const filteredRaces = computed(() => {
   
             <!-- Main Content Area -->
             <div class="main-content">
-              <div v-if="isQueryLoading" class="loading-state">
+              <div v-if="isLoading" class="loading-state">
                 <div class="loader"></div>
                 Loading races...
               </div>
               
-              <div v-else-if="queryError || isSessionExpired" class="error-state">
-                <div v-if="isSessionExpired" class="session-expired">
-                  <p>Your session has expired. Please refresh to continue.</p>
-                  <button 
-                    @click="refreshSession"
-                    class="refresh-button"
-                  >
-                    Refresh Page
-                  </button>
-                </div>
-                <div v-else>
-                  <p>{{ queryError }}</p>
-                  <button 
-                    @click="pastEventsQuery.refetch"
-                    class="retry-button"
-                  >
-                    Retry
-                  </button>
-                </div>
+              <div v-else-if="error" class="error-state">
+                {{ error }}
+                <button @click="fetchRaces" class="retry-button">Retry</button>
               </div>
   
               <div v-else class="races-container">
@@ -345,24 +359,99 @@ const filteredRaces = computed(() => {
                 <!-- Pagination -->
                 <div class="pagination">
                   <span class="pagination-info">
-                    Page {{ currentPage }} of {{ totalPages || 1 }}
+                    Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - 
+                    {{ Math.min(currentPage * itemsPerPage, filteredPastRaces.length) }} 
+                    of {{ filteredPastRaces.length }} races
                   </span>
                   <div class="pagination-controls" v-if="totalPages > 1">
+                    
+                    <!-- Previous button -->
                     <button 
+                      class="pagination-button"
                       :disabled="currentPage === 1"
-                      @click="currentPage--"
-                      class="pagination-button"
+                      @click="prevPage"
                     >
-                      Previous
+                      &lt;
                     </button>
+
+                    <!-- First page -->
                     <button 
-                      :disabled="currentPage === totalPages"
-                      @click="currentPage++"
-                      class="pagination-button"
+                      class="pagination-number"
+                      :class="{ active: currentPage === 1 }"
+                      @click="goToPage(1)"
                     >
-                      Next
+                      1
+                    </button>
+
+                    <!-- First ellipsis with input -->
+                    <div class="pagination-jump" v-if="showFirstEllipsis">
+                      <span 
+                        class="pagination-ellipsis"
+                        @click="toggleFirstInput"
+                      >...</span>
+                      <input 
+                        v-if="showFirstInput"
+                        v-model="jumpToPage"
+                        type="number"
+                        class="jump-input"
+                        :min="2"
+                        :max="visiblePageNumbers[0] - 1"
+                        @keyup.enter="handleJump"
+                        @blur="hideInputs"
+                        ref="firstJumpInput"
+                      />
+                    </div>
+
+                    <!-- Middle pages -->
+                    <button 
+                      v-for="pageNumber in visiblePageNumbers"
+                      :key="pageNumber"
+                      class="pagination-number"
+                      :class="{ active: currentPage === pageNumber }"
+                      @click="goToPage(pageNumber)"
+                    >
+                      {{ pageNumber }}
+                    </button>
+
+                    <!-- Last ellipsis with input -->
+                    <div class="pagination-jump" v-if="showLastEllipsis">
+                      <span 
+                        class="pagination-ellipsis"
+                        @click="toggleLastInput"
+                      >...</span>
+                      <input 
+                        v-if="showLastInput"
+                        v-model="jumpToPage"
+                        type="number"
+                        class="jump-input"
+                        :min="visiblePageNumbers[visiblePageNumbers.length - 1] + 1"
+                        :max="totalPages - 1"
+                        @keyup.enter="handleJump"
+                        @blur="hideInputs"
+                        ref="lastJumpInput"
+                      />
+                    </div>
+
+                    <!-- Last page -->
+                    <button 
+                      v-if="totalPages > 1"
+                      class="pagination-number"
+                      :class="{ active: currentPage === totalPages }"
+                      @click="goToPage(totalPages)"
+                    >
+                      {{ totalPages }}
+                    </button>
+
+                    <!-- Next button -->
+                    <button 
+                      class="pagination-button"
+                      :disabled="currentPage === totalPages"
+                      @click="nextPage"
+                    >
+                      &gt;
                     </button>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -448,31 +537,6 @@ const filteredRaces = computed(() => {
   border-radius: 8px;
   padding: 12px 16px;
   position: relative;
-}
-
-.clear-button {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  color: #6b7280;
-  transition: color 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-}
-
-.clear-button:hover {
-  color: #1c1c21;
-}
-
-.clear-button i {
-  font-size: 14px;
 }
 
 .search-input {
@@ -644,91 +708,94 @@ date-input::-webkit-datetime-edit-fields-wrapper {
   color: #6b7280;
 }
 
-.session-expired {
-  text-align: center;
-  padding: 24px;
-  background: #fee2e2;
-  border-radius: 8px;
-  margin: 16px 0;
-}
-
-.refresh-button {
-  margin-top: 16px;
-  padding: 8px 16px;
-  background: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.refresh-button:hover {
-  background: #b91c1c;
-}
-
 .pagination {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column; 
+  gap: 16px; 
   margin-top: 32px;
   padding: 16px 0;
 }
 
-
 .pagination-info {
   color: #6b7280;
   font-size: 14px;
+  text-align: left;
+  margin-left: 8px;
 }
 
 .pagination-controls {
   display: flex;
-  gap: 16px;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
 }
 
-.pagination-button {
-  padding: 8px 16px;
+.pagination-button,
+.pagination-number {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-number.active {
   background: #617afa;
   color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
+  border-color: #617afa;
 }
 
 .pagination-button:disabled {
-  background: #e5e7eb;
+  background: #f3f4f6;
+  color: #9ca3af;
   cursor: not-allowed;
 }
 
-.pagination-button:not(:disabled):hover {
-  background: #4c62c8;
+.pagination-button:not(:disabled):hover,
+.pagination-number:hover:not(.active) {
+  background: #f3f4f6;
 }
 
-.load-more-container {
-  text-align: center;
-  margin: 32px 0;
-}
-
-.load-more-button {
-  padding: 12px 24px;
-  background: #617afa;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 16px;
+.pagination-ellipsis {
+  color: #6b7280;
+  padding: 0 8px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  user-select: none;
+  transition: color 0.2s;
 }
 
-.load-more-button:hover {
-  background: #4c62c8;
+.pagination-ellipsis:hover {
+  color: #617afa;
 }
 
-.load-more-button:disabled {
-  background: #e5e7eb;
-  cursor: not-allowed;
+.jump-input {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 14px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.pagination-jump {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 @keyframes spin {
