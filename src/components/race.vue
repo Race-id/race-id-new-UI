@@ -340,6 +340,7 @@ onMounted(() => {
   border-radius: 8px;
   padding: 24px;
   border: 1px solid #e5e7eb;
+  animation: sectionFadeIn 0.5s ease-in-out;
 }
 
 .section-header {
@@ -353,6 +354,19 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 600;
   color: #1c1c21;
+  position: relative;
+  animation: titleSlideIn 0.5s ease-out;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #617afa;
+  animation: underlineGrow 0.6s ease-out 0.3s forwards;
 }
 
 .view-more {
@@ -363,6 +377,7 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   transition: color 0.3s;
+  animation: fadeIn 0.5s ease-out 0.4s both;
 }
 
 .view-more:hover {
@@ -389,7 +404,14 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  animation: cardSlideUp 0.6s ease-out;
+  animation-fill-mode: both;
 }
+
+.race-card:nth-child(1) { animation-delay: 0.1s; }
+.race-card:nth-child(2) { animation-delay: 0.2s; }
+.race-card:nth-child(3) { animation-delay: 0.3s; }
+.race-card:nth-child(4) { animation-delay: 0.4s; }
 
 .race-card:hover {
   transform: translateY(-4px);
@@ -468,6 +490,54 @@ onMounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes sectionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes titleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes underlineGrow {
+  to {
+    width: 40px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Responsive Design */
