@@ -68,8 +68,8 @@ const routes = [
   }
   },
   {
-    path: '/race/:id',
-    name: 'race-detail',
+    path: '/race-detail/:id',
+    name: 'RaceDetail',
     component: () => import('@/components/race-detail.vue')
   }
 ]

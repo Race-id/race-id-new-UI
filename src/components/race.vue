@@ -16,7 +16,7 @@ const goToUpcomingEvents = () => {
 }
 
 const goToRaceDetails = (raceId) => {
-  router.push(`/upcoming-events/${raceId}`)
+  router.push(`/race-detail/${raceId}`)
 }
 
 const goToPastEvents = () => {

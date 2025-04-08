@@ -29,7 +29,7 @@ const endDate = ref('')
 
 // Navigation function
 const goToRaceDetails = (raceId) => {
-  router.push(`/upcoming-events/${raceId}`)
+  router.push(`/race-detail/${raceId}`)
 }
 
 // Fetch races from API

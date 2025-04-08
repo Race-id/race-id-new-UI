@@ -30,7 +30,7 @@ const jumpToPage = ref('')
 
 // State for navigation
 const goToRaceDetails = (raceId) => {
-  router.push(`/upcoming-events/${raceId}`)
+  router.push(`/race-detail/${raceId}`)
 }
 
 // Handler for jump page
