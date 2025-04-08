@@ -2,8 +2,10 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
+import { useRoute } from 'vue-router'
 
 // State management
+const router = useRoute()
 const searchQuery = ref('')
 const selectedType = ref('')
 const selectedDate = ref('') 
@@ -26,7 +28,13 @@ const races = ref([])
 // State for input jump page
 const jumpToPage = ref('')
 
-// Handler untuk jump page
+// State for navigation
+
+const goToRaceDetails = (raceId) => {
+  router.push(`/upcoming-events/${raceId}`)
+}
+
+// Handler for jump page
 const handleJump = () => {
   const page = parseInt(jumpToPage.value)
   if (page && page >= 1 && page <= totalPages.value) {
@@ -397,6 +405,9 @@ onMounted(() => {
                     v-for="race in paginatedRaces" 
                     :key="race.id"
                     class="race-card"
+                    @click="goToRaceDetails(race.id)"
+                    role="button"
+                    tabindex="0"
                   >
                     <img
                       :src="race.image"
@@ -553,6 +564,7 @@ onMounted(() => {
 .race-finder {
   min-height: 100vh;
   background-color: #fafafa;
+  animation: pageEnter 0.6s ease-out;
 }
 
 .race-finder-container {
@@ -565,6 +577,7 @@ onMounted(() => {
   margin-bottom: 40px;
   max-width: 898px;
   margin: 0 auto 40px;
+  animation: headerSlideDown 0.5s ease-out;
 }
 
 .title {
@@ -620,6 +633,7 @@ onMounted(() => {
   border-radius: 8px;
   padding: 24px;
   border: 1px solid #e5e7eb;
+  animation: filterSlideIn 0.5s ease-out;
 }
 
 .filter-container {
@@ -739,19 +753,37 @@ date-input::-webkit-datetime-edit-fields-wrapper {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  transition: transform 0.2s;
+  transition: all 0.2s ease-in-out;
   border: 1px solid #e5e7eb;
   height: 100%;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  animation: carsSlideUp 0.6s ease-out;
+  animation-fill-mode: both;
 }
+
+.race-card:nth-child(1) { animation-delay: 0.1s; }
+.race-card:nth-child(2) { animation-delay: 0.2s; }
+.race-card:nth-child(3) { animation-delay: 0.3s; }
+.race-card:nth-child(4) { animation-delay: 0.4s; }
 
 .race-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .race-card.featured {
   grid-column: 1 / -1;
+}
+
+.race-card:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #617afa;
+}
+
+.race-card:active {
+  transform: translateY(-1px);
 }
 
 .race-image {
@@ -872,6 +904,50 @@ date-input::-webkit-datetime-edit-fields-wrapper {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes headerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes filterSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Responsive Design */

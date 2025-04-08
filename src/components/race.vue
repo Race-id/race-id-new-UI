@@ -15,6 +15,10 @@ const goToUpcomingEvents = () => {
   router.push('/upcoming-events')
 }
 
+const goToRaceDetails = (raceId) => {
+  router.push(`/upcoming-events/${raceId}`)
+}
+
 const goToPastEvents = () => {
   router.push('/past-events')
 }
@@ -160,6 +164,9 @@ onMounted(() => {
                   v-for="race in filteredUpcomingRaces.slice(0, 4)" 
                   :key="race.id"
                   class="race-card"
+                  @click= "goToRaceDetails(race.id)"
+                  role="button"
+                  tabindex="0"
                 >
                   <img
                     :src="race.image"
@@ -186,6 +193,9 @@ onMounted(() => {
                   v-for="race in pastRaces.slice(0, 4)" 
                   :key="race.id"
                   class="race-card"
+                  @click="goToRaceDetails(race.id)"
+                    role="button"
+                    tabindex="0"
                 >
                   <img
                     :src="race.image"
@@ -399,13 +409,15 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  transition: transform 0.2s;
+  transition: all 0.2s ease-in-out;
   border: 1px solid #e5e7eb;
   height: 100%;
   display: flex;
   flex-direction: column;
   animation: cardSlideUp 0.6s ease-out;
   animation-fill-mode: both;
+  cursor: pointer;
+  outline: none;
 }
 
 .race-card:nth-child(1) { animation-delay: 0.1s; }
@@ -415,10 +427,20 @@ onMounted(() => {
 
 .race-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .race-card.featured {
   grid-column: 1 / -1;
+}
+
+.race-card:focus {
+  box-shadow: 0 0 0 2px #617afa;
+  transform: translateY(-2px);
+}
+
+.race-card:active {
+  transform: translateY(-1px);
 }
 
 .race-image {
