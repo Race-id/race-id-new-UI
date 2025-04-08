@@ -17,6 +17,10 @@
         </div>
 
         <div class="div-wrapper">
+          <router-link to="/articles" class="nav-link">Article</router-link>
+        </div>
+
+        <div class="div-wrapper">
           <router-link to="/faq" class="nav-link">FAQ</router-link>
         </div>
 
@@ -50,6 +54,8 @@ export default {
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 1280px; 
+  margin: 0 auto; 
 }
 
 .depth-frame router-link {
@@ -85,6 +91,7 @@ export default {
   flex: 0 0 auto;
   flex-direction: column;
   position: relative;
+  padding: 0 8px; 
 }
 
 .depth-frame .text-wrapper {
@@ -113,10 +120,11 @@ export default {
 .depth-frame .div-2 {
   align-items: center;
   display: flex;
-  gap: 66px;
+  gap: 32px; 
   height: 40px;
   position: relative;
-  width: 372px;
+  width: auto; 
+  margin-right: 40px; 
 }
 
 .depth-frame .text-wrapper-2 {
@@ -146,13 +154,11 @@ export default {
 
 .depth-frame .div-3 {
   flex: 0 0 auto;
-  margin-right: -145.00px;
   position: relative;
 }
 
 .depth-frame .div-4 {
   flex: 0 0 auto;
-  margin-right: -273.00px;
   position: relative;
 }
 
@@ -199,6 +205,11 @@ export default {
   .nav-link {
     font-size: 13px;
   }
+
+  .depth-frame .div-2 {
+    gap: 24px;
+    margin-right: 24px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -216,6 +227,11 @@ export default {
 
   .nav-link {
     font-size: 12px;
+  }
+
+  .depth-frame .div-2 {
+    gap: 16px;
+    margin-right: 16px;
   }
 }
 
