@@ -2,10 +2,10 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
-import { useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 
 // State management
-const router = useRoute()
+const router = useRouter()
 const searchQuery = ref('')
 const selectedType = ref('')
 const selectedDate = ref('') 
@@ -29,7 +29,6 @@ const races = ref([])
 const jumpToPage = ref('')
 
 // State for navigation
-
 const goToRaceDetails = (raceId) => {
   router.push(`/upcoming-events/${raceId}`)
 }
