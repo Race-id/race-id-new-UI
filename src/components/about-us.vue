@@ -47,14 +47,6 @@ const eoForm = reactive({
   whyRaceId: ''
 })
 
-const showPartnershipForm = () => {
-  isPartnershipModalVisible.value = true
-}
-
-const showEOForm = () => {
-  isEOModalVisible.value = true
-}
-
 const closePartnershipModal = () => {
   isPartnershipModalVisible.value = false
 }
@@ -226,6 +218,47 @@ body, .about-container {
     }
 }
 
+/* Enhanced Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Hero Section Animations */
+.hero-section {
+  animation: slideUpFade 0.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.hero-title {
+  animation: scaleIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
+}
+
+.hero-subtitle {
+  animation: slideUpFade 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.5s both;
+}
+
 .hero-section {
     text-align: center;
     margin-bottom: 60px;
@@ -244,6 +277,27 @@ body, .about-container {
     line-height: 1.6;
     max-width: 600px;
     margin: 0 auto;
+}
+
+/* Info Cards Enhanced Animation */
+.info-card {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: slideUpFade 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.info-card:nth-child(1) { animation-delay: 0.6s; }
+.info-card:nth-child(2) { animation-delay: 0.7s; }
+.info-card:nth-child(3) { animation-delay: 0.8s; }
+.info-card:nth-child(4) { animation-delay: 0.9s; }
+
+.info-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.info-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
 }
 
 .content-grid {
@@ -275,6 +329,81 @@ body, .about-container {
 .info-content {
     color: #666;
     line-height: 1.6;
+}
+
+/* Modal Animations */
+.modal {
+  animation: fadeIn 0.3s ease-out;
+  backdrop-filter: blur(8px);
+}
+
+.modal-content {
+  animation: modalEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Form Input Animations */
+.form-group input,
+.form-group select,
+.form-group textarea {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  border-color: #333;
+}
+
+/* Submit Button Animation */
+.submit-btn {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.submit-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  background: #444;
+}
+
+.submit-btn:active {
+  transform: translateY(-2px);
+}
+
+/* Close Button Animation */
+.close-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.close-btn:hover {
+  transform: rotate(90deg);
+  color: #000;
+}
+
+/* Responsive Animations */
+@media (max-width: 768px) {
+  .info-card {
+    animation-delay: 0.3s;
+  }
+  
+  .modal-content {
+    animation: slideUpFade 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
 }
 
 .contact-section {
@@ -422,4 +551,3 @@ body, .about-container {
 }
 
   </style>
-  
