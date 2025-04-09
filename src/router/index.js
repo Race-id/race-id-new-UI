@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../components/home.vue'
 import Race from '../components/race.vue'
 import Articles from '../components/articles.vue'
-import Equipment from '../components/equipment.vue'
 import FAQ from '../components/faq.vue'
 import AboutUs from '../components/about-us.vue'
 import UpcomingEvents from '@/components/upcoming-events.vue'
@@ -41,14 +40,6 @@ const routes = [
     component: Articles,
     meta: {
       title: 'Race.id - Articles'
-    }
-  },
-  {
-    path: '/equipment',
-    name: 'Equipment',
-    component: Equipment,
-    meta: {
-      title: 'Coming soon!'
     }
   },
   {
