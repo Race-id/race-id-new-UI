@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
 
@@ -9,170 +9,210 @@ const articles = ref([
     id: 1,
     title: 'How to train for a marathon: a step by step guide',
     description: 'Training for a marathon is no easy feat. Whether you\'re a seasoned runner or just starting out, it\'s important to have a plan in place to help you reach your goals. In this article, we\'ll provide a step-by-step guide to training for a marathon, including tips on building your mileage, cross-training, and nutrition.',
-    image: './depth-6-frame-1.png'
+    image: "/images/article1.jpeg",
+    tags: ['Training', 'Running']
   },
   {
     id: 2,
-    title: '5 key workouts for marathon training',
-    description: 'When it comes to marathon training, consistency is key. But that doesn\'t mean you should be running the same distance at the same pace every day. To prepare your body for the demands of 26.2 miles, it\'s important to incorporate a variety of workouts into your training plan. In this article, we\'ll outline five key workouts to help you build endurance, speed, and strength for race day.',
-    image: './image.png'
+    title: 'Essential Running Gear for Marathon Training',
+    description: 'Investing in the right gear can make a significant difference in your training comfort and performance. From choosing the perfect running shoes to moisture-wicking apparel, we\'ll cover all the essential gear you need for successful marathon training.',
+    image: "/images/article2.jpeg",
+    tags: ['Gear', 'Running']
   },
   {
     id: 3,
-    title: 'The ultimate marathon training diet',
-    description: 'As the saying goes, you are what you eat – and that\'s especially true when it comes to marathon training. The foods you consume can have a major impact on your performance, energy levels, and recovery. In this article, we\'ll break down the ultimate marathon training diet, from the best sources of carbs and protein to the top foods for hydration and fueling on the run.',
-    image: './depth-6-frame-1-2.png'
+    title: 'Race Day Nutrition Strategy',
+    description: 'What you eat before, during, and after the race can make or break your marathon performance. Learn about proper carb-loading, hydration timing, and the best energy gels and supplements to use during your race.',
+    image: "/images/article3.jpeg",
+    tags: ['Nutrition', 'Race']
+  },
+  {
+    id: 4,
+    title: 'Injury Prevention for Long-Distance Runners',
+    description: 'Marathon training puts significant stress on your body. Discover the most common running injuries, how to prevent them, and the best practices for maintaining your body through intense training periods.',
+    image: "/images/article4.jpeg",
+    tags: ['Training', 'Running']
+  },
+  {
+    id: 5,
+    title: 'Mental Preparation for Your First Marathon',
+    description: 'The mental aspect of marathon running is just as important as physical training. Learn psychological techniques, visualization methods, and mental toughness strategies used by experienced runners.',
+    image: "/images/article5.jpeg",
+    tags: ['Training', 'Mental health']
   }
 ])
 
 const tags = ref([
-  { id: 1, name: 'Running' },
-  { id: 2, name: 'Training' },
-  { id: 3, name: 'Nutrition' },
-  { id: 4, name: 'Injury' },
-  { id: 5, name: 'Recovery' },
-  { id: 6, name: 'Mental health' },
-  { id: 7, name: 'Gear' },
-  { id: 8, name: 'Race' }
+  { id: 1, name: 'Running', count: 3 },
+  { id: 2, name: 'Training', count: 3 },
+  { id: 3, name: 'Nutrition', count: 1 },
+  { id: 4, name: 'Gear', count: 1 },
+  { id: 5, name: 'Race', count: 1 },
+  { id: 6, name: 'Mental health', count: 1 }
 ])
 
-const filters = ref([
-  { id: 1, name: 'Newest' },
-  { id: 2, name: 'Popular' },
-  { id: 3, name: '7 days' },
-  { id: 4, name: '30 days' },
-  { id: 5, name: 'Marathon' }
-])
+// Tag filtering functionality
+const selectedTag = ref('')
+
+const filteredArticles = computed(() => {
+  if (!selectedTag.value) return articles.value
+  return articles.value.filter(article => 
+    article.tags.includes(selectedTag.value)
+  )
+})
+
 </script>
 
 <template>
-  <Header />
-  <div class="article-page">
-    <div class="depth-frame">
-      <div class="depth-frame-wrapper">
-        <div class="content-container">
-          <!-- Main Content Section -->
-          <div class="main-content">
-            <!-- Header -->
-            <div class="section-header">
-              <h1 class="title">All articles</h1>
-            </div>
-
-            <!-- Filters -->
-            <div class="filters-container">
-              <div v-for="filter in filters" 
-                   :key="filter.id" 
-                   class="filter-item">
-                <div class="filter-content">
-                  <span class="filter-text">{{ filter.name }}</span>
-                  <div class="icon-wrapper">
-                    <img class="icon" alt="Filter icon" :src="'./vector-0.svg'" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Articles -->
-            <div class="articles-container">
-              <article v-for="article in articles" 
-                      :key="article.id" 
-                      class="article-card">
-                <div class="article-content">
-                  <h2 class="article-title">{{ article.title }}</h2>
-                  <p class="article-description">{{ article.description }}</p>
-                  <button class="read-more">Read more</button>
-                </div>
-                <div class="article-image" 
-                     :style="{ backgroundImage: `url(${article.image})` }" />
-              </article>
-            </div>
+  <div class="app-wrapper">
+    <div class="header-wrapper">
+      <Header />
+    </div>
+    
+    <main class="main-container">
+      <div class="articles-wrapper">
+        <!-- Left Content -->
+        <div class="articles-content">
+          <h1 class="page-title">All articles</h1>
+          
+          <!-- Filters -->
+          <div class="filters-row">
+            <button 
+              v-for="filter in filters" 
+              :key="filter.id" 
+              class="filter-btn"
+            >
+              {{ filter.name }}
+            </button>
           </div>
-
-          <!-- Sidebar -->
-          <aside class="sidebar">
-            <div class="section-header">
-              <h2 class="title">Related tags</h2>
-            </div>
-            <div class="tags-container">
-              <div v-for="tag in tags" 
-                   :key="tag.id" 
-                   class="tag">
-                {{ tag.name }}
+          
+          <!-- Articles Grid -->
+          <div class="articles-grid">
+            <article 
+              v-for="article in filteredArticles" 
+              :key="article.id" 
+              class="article-card"
+            >
+              <div class="article-content">
+                <h2 class="article-title">{{ article.title }}</h2>
+                <p class="article-desc">{{ article.description }}</p>
+                <button class="read-more-btn">Read more</button>
               </div>
-            </div>
-          </aside>
+              <div 
+                class="article-image" 
+                :style="{ backgroundImage: `url(${article.image})` }"
+              />
+            </article>
+          </div>
         </div>
+
+        <!-- Right Sidebar -->
+        <aside class="sidebar">
+          <h2 class="sidebar-title">Related tags</h2>
+          <div class="tags-grid">
+            <span 
+              v-for="tag in tags" 
+              :key="tag.id" 
+              class="tag-pill"
+              :class="{ active: selectedTag === tag.name }"
+              @click="selectedTag = tag.name === selectedTag ? '' : tag.name"
+            >
+              {{ tag.name }} ({{ tag.count }})
+            </span>
+          </div>
+        </aside>
       </div>
+    </main>
+
+    <div class="footer-wrapper">
+      <Footer />
     </div>
   </div>
-  <Footer />
 </template>
 
 <style scoped>
-.article-page {
-  background-color: #ffffff;
-}
-
-.depth-frame {
+.app-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-color: #f7f9fc;
-  min-height: 800px;
-  padding: 20px;
 }
 
-.content-container {
+/* Add new wrapper styles */
+.header-wrapper {
+  width: 100%;
+  background-color: #fff;
+  border-bottom: 1px solid #e5e8ea;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.footer-wrapper {
+  width: 100%;
+  background-color: #fff;
+  border-top: 1px solid #e5e8ea;
+}
+
+.main-container {
+  flex: 1;
+  padding: 40px 20px;
   max-width: 1280px;
   margin: 0 auto;
+  width: 100%;
+}
+
+.articles-wrapper {
   display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 24px;
+  grid-template-columns: 1fr 300px;
+  gap: 40px;
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.section-header {
-  padding: 20px 16px 12px;
-}
-
-.title {
-  color: #0c141c;
-  font-size: 22px;
+.page-title {
+  font-size: 28px;
   font-weight: 700;
-  line-height: 28px;
+  color: #1a1a1a;
+  margin-bottom: 24px;
 }
 
-.filters-container {
+.filters-row {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
-  padding: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
 }
 
-.filter-item {
-  background-color: #e8edf2;
-  border-radius: 12px;
-  padding: 0 16px;
-  height: 32px;
-  display: flex;
-  align-items: center;
+.filter-btn {
+  padding: 8px 16px;
+  background: #f0f2f5;
+  border: none;
+  border-radius: 8px;
+  color: #4a5568;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.articles-container {
+.filter-btn:hover {
+  background: #e2e8f0;
+}
+
+.articles-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .article-card {
   display: flex;
   gap: 24px;
-  padding: 16px;
+  padding: 24px;
   background: white;
   border-radius: 12px;
-  transition: all 0.2s ease;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
 }
 
 .article-card:hover {
@@ -188,60 +228,104 @@ const filters = ref([
 }
 
 .article-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0c141c;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.4;
 }
 
-.article-description {
-  font-size: 14px;
-  color: #4f7296;
-  line-height: 1.5;
+.article-desc {
+  color: #4a5568;
+  line-height: 1.6;
 }
 
 .article-image {
-  width: 280px;
-  border-radius: 12px;
+  width: 240px;
   background-size: cover;
   background-position: center;
+  border-radius: 8px;
 }
 
-.read-more {
-  background-color: #e8edf2;
-  border: none;
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #0c141c;
-  cursor: pointer;
+.read-more-btn {
   width: fit-content;
+  padding: 8px 16px;
+  background: #f0f2f5;
+  border: none;
+  border-radius: 8px;
+  color: #1a1a1a;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.tags-container {
+.read-more-btn:hover {
+  background: #e2e8f0;
+}
+
+.sidebar {
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+  height: fit-content;
+}
+
+.sidebar-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.tags-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
 }
 
-.tag {
-  background-color: #e8edf2;
-  border-radius: 12px;
-  padding: 4px 16px;
+.tag-pill {
+  padding: 6px 12px;
+  background: white;
+  border-radius: 6px;
+  color: #4a5568;
   font-size: 14px;
-  color: #0c141c;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.tag-pill:hover {
+  background: #f0f2f5;
 }
 
-.article-card {
-  animation: fadeIn 0.3s ease-out forwards;
+.tag-pill.active {
+  background: #617afa;
+  color: white;
+  border-color: #617afa;
 }
 
-.article-card:nth-child(2) { animation-delay: 0.1s; }
-.article-card:nth-child(3) { animation-delay: 0.2s; }
+@media (max-width: 1024px) {
+  .articles-wrapper {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+  
+  .article-image {
+    width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-container {
+    padding: 20px;
+  }
+  
+  .article-card {
+    flex-direction: column;
+  }
+  
+  .article-image {
+    width: 100%;
+    height: 200px;
+  }
+}
 </style>
