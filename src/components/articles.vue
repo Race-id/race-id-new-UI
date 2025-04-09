@@ -175,6 +175,7 @@ const filteredArticles = computed(() => {
   font-weight: 700;
   color: #1a1a1a;
   margin-bottom: 24px;
+  animation: slideInLeft 0.6s ease-out forwards;
 }
 
 .filters-row {
@@ -182,6 +183,8 @@ const filteredArticles = computed(() => {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 32px;
+  animation: fadeInUp 0.6s ease-out 0.2s forwards;
+  opacity: 0; 
 }
 
 .filter-btn {
@@ -203,6 +206,7 @@ const filteredArticles = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  transition: all 0.3s ease;
 }
 
 .article-card {
@@ -213,12 +217,22 @@ const filteredArticles = computed(() => {
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   transition: all 0.2s;
+  animation: fadeInUp 0.6s ease-out both;
+  opacity: 0; /* Set initial state */
 }
 
 .article-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Staggered animation for articles */
+.article-card:nth-child(1) { animation-delay: 0.3s; }
+.article-card:nth-child(2) { animation-delay: 0.4s; }
+.article-card:nth-child(3) { animation-delay: 0.5s; }
+.article-card:nth-child(4) { animation-delay: 0.6s; }
+.article-card:nth-child(5) { animation-delay: 0.7s; }
 
 .article-content {
   flex: 1;
@@ -267,6 +281,8 @@ const filteredArticles = computed(() => {
   background: #f8fafc;
   border-radius: 12px;
   height: fit-content;
+  animation: slideInLeft 0.6s ease-out 0.3s forwards;
+  opacity: 0; /* Set initial state */
 }
 
 .sidebar-title {
@@ -291,16 +307,60 @@ const filteredArticles = computed(() => {
   border: 1px solid #e2e8f0;
   cursor: pointer;
   transition: all 0.2s ease;
+  animation: scaleIn 0.4s ease-out backwards;
+}
+
+/* Staggered animation for tags */
+.tag-pill:nth-child(1) { animation-delay: 0.4s; }
+.tag-pill:nth-child(2) { animation-delay: 0.5s; }
+.tag-pill:nth-child(3) { animation-delay: 0.6s; }
+.tag-pill:nth-child(4) { animation-delay: 0.7s; }
+.tag-pill:nth-child(5) { animation-delay: 0.8s; }
+.tag-pill:nth-child(6) { animation-delay: 0.9s; }
+
+.tag-pill.active {
+  background: #e2e8f0;
+  color: #1a1a1a;
+  transform: translateY(-2px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tag-pill:hover {
-  background: #f0f2f5;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.tag-pill.active {
-  background: #617afa;
-  color: white;
-  border-color: #617afa;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @media (max-width: 1024px) {
