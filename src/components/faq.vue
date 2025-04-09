@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
-
 const searchQuery = ref('')
 const activeCategory = ref('All')
 const categories = ref(['All', 'Events', 'Payment'])
@@ -182,17 +181,40 @@ const filterFAQs = () => {
   @keyframes fadeSlideIn {
     0% {
       opacity: 0;
-      transform: translateX(-20px);
+      transform: translateY(30px);
     }
     100% {
       opacity: 1;
-      transform: translateX(0);
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
   
   .faq-header {
     text-align: center;
     margin-bottom: 50px;
+    animation: slideDown 0.6s ease-out forwards;
   }
   
   .faq-header h1 {
@@ -211,6 +233,7 @@ const filterFAQs = () => {
     justify-content: center;
     gap: 15px;
     margin-bottom: 40px;
+    animation: fadeSlideIn 0.5s ease-out 0.4s both;
   }
   
   .category-btn {
@@ -220,13 +243,19 @@ const filterFAQs = () => {
     border-radius: 25px;
     cursor: pointer;
     font-family: 'Libre Franklin', sans-serif;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
   }
   
+  .category-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
   .category-btn.active {
-    background: #333;
+    background: #617afa;
     color: white;
+    transform: translateY(-2px);
   }
   
   .faq-item {
@@ -237,7 +266,19 @@ const filterFAQs = () => {
     overflow: hidden;
     opacity: 1;
     transform: translateY(0);
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeSlideIn 0.5s ease-out backwards;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .faq-item:nth-child(1) { animation-delay: 0.5s; }
+  .faq-item:nth-child(2) { animation-delay: 0.6s; }
+  .faq-item:nth-child(3) { animation-delay: 0.7s; }
+  .faq-item:nth-child(4) { animation-delay: 0.8s; }
+  .faq-item:nth-child(5) { animation-delay: 0.9s; }
+  
+  .faq-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   }
   
   .faq-question {
@@ -247,7 +288,7 @@ const filterFAQs = () => {
     justify-content: space-between;
     align-items: center;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .faq-question:hover {
@@ -258,27 +299,32 @@ const filterFAQs = () => {
     padding: 0 20px;
     max-height: 0;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     color: #666;
+    opacity: 0;
+    transform: translateY(-10px);
   }
   
   .faq-answer.active {
     padding: 20px;
     max-height: 500px;
+    opacity: 1;
+    transform: translateY(0);
   }
   
   .toggle-icon {
     font-size: 1.2em;
-    transition: transform 0.3s ease;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .faq-item.active .toggle-icon {
-    transform: rotate(45deg);
+    transform: rotate(45deg) scale(1.2);
   }
   
   .search-box {
     margin-bottom: 30px;
     text-align: center;
+    animation: scaleIn 0.5s ease-out 0.3s both;
   }
   
   .search-input {
@@ -290,6 +336,12 @@ const filterFAQs = () => {
     font-size: 1em;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     padding-right: 40px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .search-input:focus {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(97, 122, 250, 0.15);
   }
 
   .search-input-container {
@@ -314,14 +366,14 @@ const filterFAQs = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
 }
 
 
   .reset-button:hover {
     color: #333;
+    transform: rotate(90deg) scale(1.1);
   }
 
   </style>
-  
