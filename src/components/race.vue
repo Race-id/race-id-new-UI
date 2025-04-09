@@ -93,8 +93,7 @@ const filteredUpcomingRaces = computed(() => {
 
   const query = searchQuery.value.toLowerCase()
   return races.value.filter(race => 
-    race.title.toLowerCase().includes(query) ||
-    race.location.toLowerCase().includes(query)
+    race.title?.toLowerCase().includes(query)
   )
 })
 
@@ -103,14 +102,17 @@ const filteredPastRaces = computed(() => {
 
   const query = searchQuery.value.toLowerCase()
   return pastRaces.value.filter(race => 
-    race.title.toLowerCase().includes(query) ||
-    race.location.toLowerCase().includes(query)
+    race.title?.toLowerCase().includes(query)
   )
 })
 
 // Methods
-const handleSearch = () => {
-  console.log('Searching for:', searchQuery.value)
+const resetSearch = () => {
+  searchQuery.value = ''
+}
+
+const handleSearch = (e) => {
+  e.preventDefault() // Prevent form submission
 }
 
 onMounted(() => {
@@ -123,23 +125,31 @@ onMounted(() => {
   <Header />
   <main class="race-finder">
     <section class="race-finder-container">
-      <!-- Search Header -->
+      <!-- Search Header with animated classes -->
       <header class="header">
-        <h1 class="title">Find Your Next Race</h1>
-        <div class="search-container">
+        <div class="title-wrapper">
+          <h1 class="title animate-title">
+            <span class="title-word">Find</span>
+            <span class="title-word">Your</span>
+            <span class="title-word">Next</span>
+            <span class="title-word">Race</span>
+          </h1>
+        </div>
+        <div class="search-container animate-search">
           <div class="search-input-container">
             <input 
               v-model="searchQuery"
               type="text" 
-              placeholder="Search races by name or location" 
+              placeholder="Search races by name" 
               class="search-input"
               @keyup.enter="handleSearch"
             />
             <button 
               v-show="searchQuery" 
               class="clear-button" 
-              @click="searchQuery = ''"
+              @click="resetSearch"
               type="button"
+              aria-label="Clear search"
             >
               <i class="fas fa-times"></i>
             </button>
@@ -268,19 +278,42 @@ onMounted(() => {
   margin: 0 auto 40px;
 }
 
+.title-wrapper {
+  overflow: hidden;
+}
+
 .title {
-  font-size: 36px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 48px;
   font-weight: 800;
   color: #1c1c21;
   margin-bottom: 24px;
-  line-height: 1.2;
 }
+
+.title-word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(40px);
+  animation: wordSlide 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.title-word:nth-child(1) { animation-delay: 0.1s; }
+.title-word:nth-child(2) { animation-delay: 0.2s; }
+.title-word:nth-child(3) { animation-delay: 0.3s; }
+.title-word:nth-child(4) { animation-delay: 0.4s; }
 
 .search-container {
   display: flex;
   align-items: center;
   gap: 16px;
   margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: searchBarSlide 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: 0.6s;
 }
 
 .search-input-container {
@@ -292,6 +325,14 @@ onMounted(() => {
   border-radius: 8px;
   padding: 12px 16px;
   position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+}
+
+.search-input-container:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(97, 122, 250, 0.15);
+  border-color: #617afa;
 }
 
 .clear-button {
@@ -304,15 +345,17 @@ onMounted(() => {
   cursor: pointer;
   padding: 8px;
   color: #6b7280;
-  transition: color 0.3s;
+  transition: all 0.3s ease;
+  opacity: 0.7;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
 }
 
 .clear-button:hover {
+  opacity: 1;
   color: #1c1c21;
+  transform: translateY(-50%) scale(1.1);
 }
 
 .clear-button i {
@@ -327,6 +370,7 @@ onMounted(() => {
   outline: none;
   color: #1c1c21;
   padding-right: 40px;
+  width: 100%;
 }
 
 .content {
@@ -562,6 +606,28 @@ onMounted(() => {
   }
 }
 
+@keyframes wordSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes searchBarSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .content-row {
@@ -583,7 +649,12 @@ onMounted(() => {
   }
 
   .title {
-    font-size: 28px;
+    font-size: 36px;
+    gap: 8px;
+  }
+
+  .title-word {
+    font-size: 24px;
   }
 
   .section-header {
@@ -600,6 +671,10 @@ onMounted(() => {
 
   .races-section {
     padding: 16px;
+  }
+
+  .title {
+    font-size: 28px;
   }
 }
 </style>
