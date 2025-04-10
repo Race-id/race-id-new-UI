@@ -257,21 +257,40 @@ const formatDate = (dateStr) => {
   return `${day}/${month}/${year}`
 }
 
-// Methods
-const handleDateChange = () => {
-  console.log('Date change - Start:', startDate.value, 'End:', endDate.value)
+// Hapus handleDateChange dan ganti dengan handleDateInput
+const handleDateInput = (event) => {
+  const input = event.target
+  const value = input.value
   
-  if (startDate.value && endDate.value) {
-    const start = new Date(startDate.value)
-    const end = new Date(endDate.value)
+  if (!value) return
 
-    if (end < start) {
-      console.warn('End date cannot be earlier than start date')
-      endDate.value = startDate.value
+  // Parse tanggal yang diinput
+  const inputDate = new Date(value)
+
+  if (input.id === 'start-date') {
+    startDate.value = value
+    
+    // Hanya validasi jika end date sudah ada
+    if (endDate.value) {
+      const end = new Date(endDate.value)
+      // Hanya update end date jika end date sebelum start date
+      if (end < inputDate) {
+        endDate.value = value
+      }
+    }
+  } else if (input.id === 'end-date') {
+    // Untuk end date, hanya validasi jika start date ada
+    if (startDate.value) {
+      const start = new Date(startDate.value)
+      // Jika tanggal yang diinput valid dan tidak sebelum start date, update
+      if (inputDate >= start) {
+        endDate.value = value
+      }
+    } else {
+      // Jika tidak ada start date, langsung update
+      endDate.value = value
     }
   }
-  
-  currentPage.value = 1 // Reset to page 1
 }
 
 const resetFilters = () => {
@@ -279,8 +298,9 @@ const resetFilters = () => {
   selectedType.value = ''
   selectedDate.value = ''
   selectedProvince.value = ''
-  currentPage.value = 1 // Reset to first page after filtering
-  document.getElementById('date-input').value = '' // Reset date input
+  startDate.value = ''  // Reset start date
+  endDate.value = ''    // Reset end date
+  currentPage.value = 1  // Reset to first page
 }
 
 const resetSearch = () => {
@@ -381,7 +401,7 @@ onMounted(() => {
                       id="start-date"
                       class="date-input"
                       v-model="startDate"
-                      @change="handleDateChange"
+                      @input="handleDateInput"
                     />
                   </div>
                   <div class="date-field">
@@ -391,7 +411,7 @@ onMounted(() => {
                       id="end-date"
                       class="date-input"
                       v-model="endDate"
-                      @change="handleDateChange"
+                      @input="handleDateInput"
                       :min="startDate"
                     />
                   </div>

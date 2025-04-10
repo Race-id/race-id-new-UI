@@ -128,12 +128,10 @@ const provinces = [
   'Papua Barat'
 ]
 
-// Update filteredPastRaces computed property
 const filteredPastRaces = computed(() => {
-  // Always start with full races list
   let filtered = races.value
 
-  // Search filter - prioritas tertinggi
+
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     return races.value.filter(race => 
@@ -141,19 +139,25 @@ const filteredPastRaces = computed(() => {
     )
   }
 
-  // Filter provinsi hanya jika tidak sedang mencari
+  // Filter provinsi
   if (selectedProvince.value) {
     filtered = filtered.filter(race => 
       race.location.includes(selectedProvince.value)
     )
   }
 
-  // Filter tanggal hanya jika tidak sedang mencari
+  // Date range filter
   if (startDate.value && endDate.value) {
     filtered = filtered.filter(race => {
       const raceDate = new Date(race.startDate)
+      raceDate.setHours(0, 0, 0, 0)
+      
       const start = new Date(startDate.value)
+      start.setHours(0, 0, 0, 0)
+      
       const end = new Date(endDate.value)
+      end.setHours(23, 59, 59, 999)
+
       return raceDate >= start && raceDate <= end
     })
   }
@@ -161,21 +165,40 @@ const filteredPastRaces = computed(() => {
   return filtered
 })
 
-const handleDateChange = () => {
-  console.log('Date change - Start:', startDate.value, 'End:', endDate.value)
-  
-  if (startDate.value && endDate.value) {
-    const start = new Date(startDate.value)
-    const end = new Date(endDate.value)
 
-    if (end < start) {
-      console.warn('End date cannot be earlier than start date')
-      endDate.value = startDate.value
+const handleDateInput = (event) => {
+  const input = event.target
+  const value = input.value
+  
+  if (!value) return
+
+  // Parse tanggal yang diinput
+  const inputDate = new Date(value)
+
+  if (input.id === 'start-date') {
+    startDate.value = value
+    
+    // Hanya validasi jika end date sudah ada
+    if (endDate.value) {
+      const end = new Date(endDate.value)
+      // Hanya update end date jika end date sebelum start date
+      if (end < inputDate) {
+        endDate.value = value
+      }
+    }
+  } else if (input.id === 'end-date') {
+    // Untuk end date, hanya validasi jika start date ada
+    if (startDate.value) {
+      const start = new Date(startDate.value)
+      // Jika tanggal yang diinput valid dan tidak sebelum start date, update
+      if (inputDate >= start) {
+        endDate.value = value
+      }
+    } else {
+      // Jika tidak ada start date, langsung update
+      endDate.value = value
     }
   }
-  
-  currentPage.value = 1 // Reset ke halaman 1
-  console.log('Filtered races count:', filteredPastRaces.value.length)
 }
 
 const resetFilters = () => {
@@ -194,14 +217,13 @@ const resetSearch = () => {
 
 const totalPages = computed(() => Math.ceil(filteredPastRaces.value.length / itemsPerPage))
 
-// Update paginatedRaces computed property
+
 const paginatedRaces = computed(() => {
-  // Jika sedang mencari, tampilkan semua hasil tanpa pagination
+
   if (searchQuery.value) {
     return filteredPastRaces.value
   }
 
-  // Jika tidak mencari, gunakan pagination
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
   return filteredPastRaces.value.slice(start, end)
@@ -231,19 +253,15 @@ const visiblePageNumbers = computed(() => {
   const pages = []
 
   if (total <= 7) {
-    // Jika total halaman 7 atau kurang, tampilkan semua
     for (let i = 1; i <= total; i++) {
       pages.push(i)
     }
   } else {
-    // Selalu tampilkan 5 halaman, tapi skip halaman 1 karena sudah ditampilkan terpisah
     if (current <= 4) {
-      // Awal: skip 1, mulai dari 2
       for (let i = 2; i <= 5; i++) {
         pages.push(i)
       }
     } else if (current >= total - 3) {
-      // Akhir
       for (let i = total - 4; i < total; i++) {
         pages.push(i)
       }
@@ -388,7 +406,7 @@ onMounted(() => {
                       id="start-date"
                       class="date-input"
                       v-model="startDate"
-                      @change="handleDateChange"
+                      @input="handleDateInput"
                     />
                   </div>
                   <div class="date-field">
@@ -398,8 +416,9 @@ onMounted(() => {
                       id="end-date"
                       class="date-input"
                       v-model="endDate"
-                      @change="handleDateChange"
+                      @input="handleDateInput"
                       :min="startDate"
+                      pattern="\d{4}-\d{2}-\d{2}"
                     />
                   </div>
                 </div>
