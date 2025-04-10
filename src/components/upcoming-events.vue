@@ -283,6 +283,10 @@ const resetFilters = () => {
   document.getElementById('date-input').value = '' // Reset date input
 }
 
+const resetSearch = () => {
+  searchQuery.value = ''
+}
+
 const totalPages = computed(() => Math.ceil(filteredUpcomingRaces.value.length / itemsPerPage))
 
 const paginatedRaces = computed(() => {
@@ -309,9 +313,18 @@ onMounted(() => {
               <input 
                 v-model="searchQuery"
                 type="text" 
-                placeholder="Search races by name or location" 
+                placeholder="Search races by name" 
                 class="search-input"
               />
+              <button 
+                v-show="searchQuery" 
+                class="clear-button" 
+                @click="resetSearch"
+                type="button"
+                aria-label="Clear search"
+              >
+                <i class="fas fa-times"></i>
+              </button>
             </div>
           </div>
         </header>
@@ -598,14 +611,29 @@ onMounted(() => {
 }
 
 .search-input-container {
-  flex: 1;
+  position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
   background-color: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 12px 16px;
-  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  border-color: #617afa;
+  box-shadow: 0 0 0 2px rgba(97, 122, 250, 0.1);
 }
 
 .clear-button {
@@ -618,29 +646,21 @@ onMounted(() => {
   cursor: pointer;
   padding: 8px;
   color: #6b7280;
-  transition: color 0.3s;
+  transition: all 0.3s ease;
+  opacity: 0.7;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
 }
 
 .clear-button:hover {
+  opacity: 1;
   color: #1c1c21;
+  transform: translateY(-50%) scale(1.1);
 }
 
 .clear-button i {
   font-size: 14px;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  outline: none;
-  color: #1c1c21;
-  padding-right: 40px;
 }
 
 .content {

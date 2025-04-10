@@ -128,46 +128,34 @@ const provinces = [
   'Papua Barat'
 ]
 
+// Update filteredPastRaces computed property
 const filteredPastRaces = computed(() => {
+  // Always start with full races list
   let filtered = races.value
 
+  // Search filter - prioritas tertinggi
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(race => 
-      race.title.toLowerCase().includes(query) ||
-      race.location.toLowerCase().includes(query)
+    return races.value.filter(race => 
+      race.title.toLowerCase().includes(query)
     )
   }
 
-  // Update filter tanggal dengan normalisasi
-  if (startDate.value || endDate.value) {
-    filtered = filtered.filter(race => {
-      const raceDate = new Date(race.startDate)
-      raceDate.setHours(0, 0, 0, 0)  // Normalize race date
-
-      if (startDate.value && endDate.value) {
-        const start = new Date(startDate.value)
-        start.setHours(0, 0, 0, 0)
-        const end = new Date(endDate.value)
-        end.setHours(23, 59, 59, 999)  // Set to end of day
-        return raceDate >= start && raceDate <= end
-      } else if (startDate.value) {
-        const start = new Date(startDate.value)
-        start.setHours(0, 0, 0, 0)
-        return raceDate >= start
-      } else if (endDate.value) {
-        const end = new Date(endDate.value)
-        end.setHours(23, 59, 59, 999)
-        return raceDate <= end
-      }
-      return true
-    })
-  }
-
+  // Filter provinsi hanya jika tidak sedang mencari
   if (selectedProvince.value) {
-    filtered = filtered.filter(race =>
+    filtered = filtered.filter(race => 
       race.location.includes(selectedProvince.value)
     )
+  }
+
+  // Filter tanggal hanya jika tidak sedang mencari
+  if (startDate.value && endDate.value) {
+    filtered = filtered.filter(race => {
+      const raceDate = new Date(race.startDate)
+      const start = new Date(startDate.value)
+      const end = new Date(endDate.value)
+      return raceDate >= start && raceDate <= end
+    })
   }
 
   return filtered
@@ -199,9 +187,21 @@ const resetFilters = () => {
   currentPage.value = 1
 }
 
+const resetSearch = () => {
+  searchQuery.value = ''
+  currentPage.value = 1 // Optional: reset to first page when clearing search
+}
+
 const totalPages = computed(() => Math.ceil(filteredPastRaces.value.length / itemsPerPage))
 
+// Update paginatedRaces computed property
 const paginatedRaces = computed(() => {
+  // Jika sedang mencari, tampilkan semua hasil tanpa pagination
+  if (searchQuery.value) {
+    return filteredPastRaces.value
+  }
+
+  // Jika tidak mencari, gunakan pagination
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
   return filteredPastRaces.value.slice(start, end)
@@ -286,6 +286,22 @@ const hideInputs = () => {
   }, 200)
 }
 
+const paginationInfo = computed(() => {
+  const total = filteredPastRaces.value.length
+  
+  // If searching, show total results
+  if (searchQuery.value) {
+    return `Showing all ${total} matching results`
+  }
+
+  // Otherwise show paginated info
+  const start = (currentPage.value - 1) * itemsPerPage + 1
+  const end = Math.min(currentPage.value * itemsPerPage, total)
+  return `Showing ${start} - ${end} of ${total} races`
+})
+
+const showPagination = computed(() => !searchQuery.value && filteredPastRaces.value.length > itemsPerPage)
+
 onMounted(() => {
   fetchRaces()
 })
@@ -307,6 +323,15 @@ onMounted(() => {
                 placeholder="Search races by name or location" 
                 class="search-input"
               />
+              <button 
+                v-show="searchQuery" 
+                class="clear-button" 
+                @click="resetSearch"
+                type="button"
+                aria-label="Clear search"
+              >
+                <i class="fas fa-times"></i>
+              </button>
             </div>
           </div>
         </header>
@@ -421,12 +446,8 @@ onMounted(() => {
                 </div>
   
                 <!-- Pagination -->
-                <div class="pagination">
-                  <span class="pagination-info">
-                    Showing {{ (currentPage - 1) * itemsPerPage + 1 }} - 
-                    {{ Math.min(currentPage * itemsPerPage, filteredPastRaces.length) }} 
-                    of {{ filteredPastRaces.length }} races
-                  </span>
+                <div class="pagination" v-if="!searchQuery && filteredPastRaces.length > itemsPerPage">
+                  <span class="pagination-info">{{ paginationInfo }}</span>
                   <div class="pagination-controls" v-if="totalPages > 1">
                     
                     <!-- Previous button -->
@@ -595,24 +616,38 @@ onMounted(() => {
 }
 
 .search-input-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background-color: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px 16px;
   position: relative;
+  width: 100%;
 }
 
 .search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   font-size: 16px;
   outline: none;
+  transition: all 0.3s ease;
+}
+
+.clear-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: #6b7280;
+  transition: all 0.3s ease;
+  opacity: 0.7;
+}
+
+.clear-button:hover {
+  opacity: 1;
   color: #1c1c21;
-  padding-right: 40px;
+  transform: translateY(-50%) scale(1.1);
 }
 
 .content {
@@ -743,8 +778,17 @@ date-input::-webkit-datetime-edit-fields-wrapper {
 
 .races-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 24px;
+}
+
+/* No results message */
+.races-grid:empty::after {
+  content: 'No races found';
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
 }
 
 .race-card {
