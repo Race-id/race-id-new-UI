@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
 import { useRouter } from 'vue-router'
@@ -144,7 +144,8 @@ const handleDateSelect = (selectedDate) => {
 
 // Add method to close calendar
 const closeCalendar = () => {
-  showCalendar.value = false
+  showCalendar.value = false;
+  document.body.classList.remove('popup-open');
 }
 
 // Add toggle state
@@ -152,9 +153,19 @@ const showCalendar = ref(false)
 
 // Add toggle function
 const toggleCalendar = () => {
-  console.log('Toggle calendar:', !showCalendar.value) // Debug log
-  showCalendar.value = !showCalendar.value
+  showCalendar.value = !showCalendar.value;
+  // Toggle class on body
+  if (showCalendar.value) {
+    document.body.classList.add('popup-open');
+  } else {
+    document.body.classList.remove('popup-open');
+  }
 }
+
+// Add onUnmounted hook
+onUnmounted(() => {
+  document.body.classList.remove('popup-open');
+})
 
 </script>
 
@@ -306,7 +317,12 @@ const toggleCalendar = () => {
   <Footer />
 </template>
 
-<style scoped>
+<style>
+/* Add this at the top of your style section and remove 'scoped' */
+body.popup-open {
+  overflow: hidden;
+  padding-right: 17px; /* Compensate for scrollbar width to prevent layout shift */
+}
 
 .loading-state,
 .error-state {
@@ -840,7 +856,8 @@ const toggleCalendar = () => {
   align-items: flex-start; /* Ubah dari center ke flex-start */
   padding-top: 80px; /* Kurangi padding top */
   z-index: 9999;
-  overflow: hidden; /* Prevent background scroll */
+  overflow-y: auto; /* Allow scrolling in overlay */
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes popupSlideIn {
@@ -984,6 +1001,8 @@ const toggleCalendar = () => {
   justify-content: center;
   align-items: center;
   z-index: 9999; /* Tingkatkan z-index */
+  overflow-y: auto; /* Allow scrolling in overlay */
+  -webkit-overflow-scrolling: touch;
 }
 
 .popup-content {
@@ -991,12 +1010,12 @@ const toggleCalendar = () => {
   border-radius: 8px;
   width: 100%;
   max-width: 400px;
-  max-height: calc(100vh - 120px); /* Set max height */
+  max-height: 80vh; /* Limit height */
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 10000; /* Tambahkan z-index */
   overflow: hidden; /* Tetap hidden untuk mencegah overflow */
-  margin: 16px;
+  margin: 0 auto; /* Center horizontally */
   display: flex;
   flex-direction: column;
 }
@@ -1006,6 +1025,7 @@ const toggleCalendar = () => {
   width: 100%; /* Set fixed width */
   flex: 1;
   overflow-y: auto; /* Enable vertical scroll */
+  max-height: calc(80vh - 60px); /* Adjust based on header height */
   -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
 }
 
