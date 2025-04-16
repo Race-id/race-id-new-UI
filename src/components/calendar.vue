@@ -4,6 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 defineProps({
   events: {
     type: Array,
+    default: () => []
   }
 })
 
