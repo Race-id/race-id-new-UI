@@ -6,6 +6,7 @@ import FAQ from '../components/faq.vue'
 import AboutUs from '../components/about-us.vue'
 import UpcomingEvents from '@/components/upcoming-events.vue'
 import PastEvents from '@/components/past-events.vue'
+import calendar from '@/components/calendar.vue'
 
 const routes = [
   {
@@ -62,6 +63,11 @@ const routes = [
     path: '/race-detail/:id',
     name: 'RaceDetail',
     component: () => import('@/components/race-detail.vue')
+  },
+  {
+    path: '/calendar',
+    name: 'Calendar',
+    component: calendar
   }
 ]
 

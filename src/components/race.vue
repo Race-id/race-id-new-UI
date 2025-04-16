@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import Header from '@/components/header.vue'
 import Footer from '@/components/footer.vue'
 import { useRouter } from 'vue-router'
+import Calendar from '@/components/calendar.vue'
 
 // State management (simplified)
 const searchQuery = ref('')
@@ -81,7 +82,7 @@ const fetchRaces = async () => {
   } catch (err) {
     error.value = 'Failed to load races'
     console.error('Error fetching races:', err)
-    console.error('Error details:', err.message) // Additional error details
+    console.error('Error details:', err.message) 
   } finally {
     isLoading.value = false
   }
@@ -118,6 +119,42 @@ const handleSearch = (e) => {
 onMounted(() => {
   fetchRaces()
 })
+
+// Move date-related logic to computed properties
+const calendarDate = computed(() => {
+  const date = new Date()
+  return {
+    month: date.toLocaleString('default', { month: 'long' }),
+    day: date.getDate(),
+    year: date.getFullYear(),
+    weekday: date.toLocaleString('default', { weekday: 'long' })
+  }
+})
+
+// Add method to handle date selection
+const handleDateSelect = (selectedDate) => {
+  // Jangan langsung tutup popup
+  if (selectedDate) {
+    // Filter races berdasarkan tanggal yang dipilih
+    const selected = new Date(selectedDate)
+    // Implementasi filter logic disini
+    console.log('Selected date:', selected)
+  }
+}
+
+// Add method to close calendar
+const closeCalendar = () => {
+  showCalendar.value = false
+}
+
+// Add toggle state
+const showCalendar = ref(false)
+
+// Add toggle function
+const toggleCalendar = () => {
+  console.log('Toggle calendar:', !showCalendar.value) // Debug log
+  showCalendar.value = !showCalendar.value
+}
 
 </script>
 
@@ -220,6 +257,48 @@ onMounted(() => {
               </div>
             </section>
           </div>
+          
+          <!-- Calendar Widget -->
+          <aside class="calendar-widget">
+            <!-- Clickable widget area -->
+            <div class="widget-trigger" @click="toggleCalendar">
+              <div class="month-label">
+                {{ calendarDate.month }} {{ calendarDate.year }}
+              </div>
+              <div class="date-display">
+                <div class="date-content">
+                  <span class="current-day">{{ calendarDate.day }}</span>
+                  <span class="weekday">{{ calendarDate.weekday }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calendar Popup -->
+            <Transition name="slide-fade">
+              <div v-show="showCalendar" class="calendar-popup">
+                <div class="popup-overlay" @click.self="closeCalendar">
+                  <div class="popup-content">
+                    <div class="popup-header">
+                      <h3 class="popup-title">Pilih Tanggal</h3>
+                      <button 
+                        class="close-button"
+                        @click="closeCalendar"
+                        aria-label="Close calendar"
+                      >
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                    <div class="calendar-container">
+                      <Calendar 
+                        :events="races"
+                        @select-date="handleDateSelect"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </aside>
         </div>
       </div>
     </section>
@@ -379,7 +458,10 @@ onMounted(() => {
 }
 
 .content-row {
-  display: block;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 32px;
+  align-items: start;
 }
 
 .main-content {
@@ -553,6 +635,90 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.calendar-widget {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: visible; /* Ubah dari hidden ke visible */
+  position: sticky;
+  top: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  animation: calendarSlideIn 0.6s ease-out;
+}
+
+.widget-header {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #617afa;
+  cursor: pointer;
+}
+
+.close-calendar-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: white;
+  padding: 8px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.close-calendar-button:hover {
+  opacity: 1;
+}
+
+.close-calendar-button i {
+  font-size: 16px;
+}
+
+.month-label {
+  background: #617afa;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 18px;
+  transition: background-color 0.3s ease;
+}
+
+.calendar-widget:hover .month-label {
+  background: #4c62c8;
+}
+
+.date-display {
+  padding: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f8fafc;
+  transition: background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.calendar-widget:hover .date-display {
+  background: #f1f5f9;
+}
+
+.current-day {
+  font-size: 48px;
+  font-weight: 700;
+  color: #1c1c21;
+  line-height: 1;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.calendar-widget:hover .current-day {
+  transform: scale(1.1);
+  color: #617afa;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -628,6 +794,74 @@ onMounted(() => {
   }
 }
 
+/* Add new keyframe animation */
+@keyframes calendarSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.weekday {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* Update calendar popup styles */
+.calendar-popup {
+  position: absolute;
+  top: calc(100% + 60px); /* Ubah dari 100% menjadi calc(100% + 60px) */
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  z-index: 100;
+  margin-top: 8px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+/* Tambahkan styling untuk popup overlay */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Ubah dari center ke flex-start */
+  padding-top: 80px; /* Kurangi padding top */
+  z-index: 9999;
+  overflow: hidden; /* Prevent background scroll */
+}
+
+@keyframes popupSlideIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.date-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.calendar-widget:hover .date-content {
+  transform: translateY(-2px);
+  transition: transform 0.3s ease;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .content-row {
@@ -636,6 +870,10 @@ onMounted(() => {
 
   .races-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .calendar-widget {
+    display: none;
   }
 }
 
@@ -676,5 +914,136 @@ onMounted(() => {
   .title {
     font-size: 28px;
   }
+}
+
+.widget-header, .date-display {
+  cursor: pointer;
+}
+
+.popup-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.popup-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1c1c21;
+  margin: 0;
+}
+
+.close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: #f3f4f6;
+  color: #1c1c21;
+  border-color: #d1d5db;
+}
+
+.close-button i {
+  font-size: 16px;
+}
+
+/* Transition animations */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.2s ease-out;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* New styles */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Tingkatkan z-index */
+}
+
+.popup-content {
+  background: white;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  max-height: calc(100vh - 120px); /* Set max height */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 10000; /* Tambahkan z-index */
+  overflow: hidden; /* Tetap hidden untuk mencegah overflow */
+  margin: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-container {
+  padding: 16px;
+  width: 100%; /* Set fixed width */
+  flex: 1;
+  overflow-y: auto; /* Enable vertical scroll */
+  -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+}
+
+/* Pastikan calendar tidak melewati container */
+:deep(.calendar-wrapper) {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box; /* Pastikan padding termasuk dalam width */
+}
+
+/* Pastikan semua elemen kalender mengikuti container */
+:deep(.calendar-wrapper *) {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Update transition animations */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.2s ease-out;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Update responsive styles */
+@media (max-width: 480px) {
+  .popup-content {
+    margin: 8px;
+    width: calc(100% - 16px); /* Kurangi margin dari total width */
+  }
+  
+  .calendar-container {
+    padding: 8px;
+  }
+  
 }
 </style>
