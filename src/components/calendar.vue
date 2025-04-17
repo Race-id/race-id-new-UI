@@ -135,11 +135,17 @@ const isToday = (date) => {
 }
 
 const previousMonth = () => {
-  currentDate.value = new Date(currentYear.value, currentDate.value.getMonth() - 1)
+  const newDate = new Date(currentYear.value, currentDate.value.getMonth() - 1);
+  currentDate.value = newDate;
+  selectedMonthIndex.value = newDate.getMonth();
+  selectedYear.value = newDate.getFullYear();
 }
 
 const nextMonth = () => {
-  currentDate.value = new Date(currentYear.value, currentDate.value.getMonth() + 1)
+  const newDate = new Date(currentYear.value, currentDate.value.getMonth() + 1);
+  currentDate.value = newDate;
+  selectedMonthIndex.value = newDate.getMonth();
+  selectedYear.value = newDate.getFullYear();
 }
 
 const selectDate = (day) => {
@@ -154,123 +160,253 @@ const selectDate = (day) => {
 const handleClose = () => {
   emit('close')
 }
+
+// New refs for dropdown selectors
+const selectedMonthIndex = ref(currentDate.value.getMonth())
+const selectedYear = ref(currentDate.value.getFullYear())
+
+// Generate year options (5 years before and after current year)
+const yearOptions = computed(() => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+    years.push(i);
+  }
+  return years;
+});
+
+// New navigation functions
+const updateMonth = () => {
+  currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value);
+}
+
+const updateYear = () => {
+  currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value);
+}
+
+const goToToday = () => {
+  const today = new Date();
+  currentDate.value = today;
+  selectedMonthIndex.value = today.getMonth();
+  selectedYear.value = today.getFullYear();
+}
 </script>
 
 <template>
-  <div class="calendar-container">
-    <div class="calendar-header">
-      <button @click="previousMonth">&lt;</button>
-      <h2>{{ currentMonth }} {{ currentYear }}</h2>
-      <button @click="nextMonth">&gt;</button>
-    </div>
-
-    <div class="calendar-grid">
-      <!-- Day headers -->
-      <div 
-        v-for="day in DAYS" 
-        :key="day" 
-        class="calendar-cell header"
-      >
-        {{ day }}
+  <div class="calendar-wrapper">
+    <!-- Calendar Container -->
+    <div class="calendar-container">
+      <!-- Month Navigation - Positioned at top -->
+      <div class="month-navigation">
+        <div class="nav-controls">
+          <button @click="previousMonth" class="nav-button" title="Previous Month">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          
+          <div class="month-selector">
+            <h2>{{ currentMonth }} {{ currentYear }}</h2>
+            <div class="dropdown-controls">
+              <select v-model="selectedMonthIndex" @change="updateMonth" class="month-dropdown">
+                <option v-for="(month, index) in MONTHS" :key="month" :value="index">
+                  {{ month }}
+                </option>
+              </select>
+              
+              <select v-model="selectedYear" @change="updateYear" class="year-dropdown">
+                <option v-for="year in yearOptions" :key="year" :value="year">
+                  {{ year }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <button @click="nextMonth" class="nav-button" title="Next Month">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Calendar days -->
-      <div
-        v-for="(day, index) in calendarDays"
-        :key="index"
-        class="calendar-cell"
-        :class="{
-          'empty': day.isEmpty,
-          'today': day.isToday,
-          'has-event': !day.isEmpty && day.hasEvent
-        }"
-        @click="selectDate(day)"
-      >
-        {{ day.day }}
-        
-        <!-- Event indicator -->
-        <div v-if="!day.isEmpty && day.hasEvent" class="event-indicators">
-          <span class="event-dot"></span>
-          <span v-if="getEventsForDate(day.date).length > 1" 
-                class="event-count">
-            {{ getEventsForDate(day.date).length }}
-          </span>
+      <div class="calendar-grid">
+        <!-- Day headers -->
+        <div 
+          v-for="day in DAYS" 
+          :key="day" 
+          class="calendar-cell header"
+        >
+          {{ day }}
         </div>
 
-        <!-- Tooltip with event details -->
-        <div v-if="!day.isEmpty && day.hasEvent" class="event-tooltip">
-          <div v-for="event in getEventsForDate(day.date)" 
-               :key="event.title" 
-               class="event-item">
-            <a :href="event.url" 
-               target="_blank" 
-               class="event-link">
-              {{ event.title }}
-            </a>
+        <!-- Calendar days -->
+        <div
+          v-for="(day, index) in calendarDays"
+          :key="index"
+          class="calendar-cell"
+          :class="{
+            'empty': day.isEmpty,
+            'today': day.isToday,
+            'has-event': !day.isEmpty && day.hasEvent,
+            'selected': selectedDate && !day.isEmpty && day.date.toDateString() === selectedDate.toDateString()
+          }"
+          @click="selectDate(day)"
+        >
+          {{ day.day }}
+          
+          <!-- Simplified Event indicator - only blue dot -->
+          <div v-if="!day.isEmpty && day.hasEvent" class="event-indicators">
+            <span class="event-dot"></span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Event panel -->
-    <div v-if="selectedDate" class="event-panel">
-      <h3>{{ selectedDate.toLocaleDateString() }}</h3>
-      <div v-for="event in getEventsForDate(selectedDate)" 
-           :key="event.title" 
-           class="event-item">
-        <h4>{{ event.title }}</h4>
+    <!-- Side Panel for Events -->
+    <div class="events-side-panel" :class="{ 'has-events': selectedDate }">
+      <div v-if="selectedDate" class="events-content">
+        <h3>{{ selectedDate.toLocaleDateString() }}</h3>
+        <div class="events-list">
+          <div v-for="event in getEventsForDate(selectedDate)" 
+               :key="event.title" 
+               class="event-item">
+            <h4>{{ event.title }}</h4>
+            <a :href="event.url" 
+               target="_blank" 
+               class="event-link">
+              View Event →
+            </a>
+          </div>
+        </div>
+      </div>
+      <div v-else class="no-date-selected">
+        Select a date to view events
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.calendar-container {
-  max-width: 800px;
+/* Wrapper layout */
+.calendar-wrapper {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 12px;
+}
+
+/* Compact calendar container */
+.calendar-container {
+  flex: 0 0 480px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.calendar-header {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 0;
+  overflow: hidden;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+}
+
+/* Improved Top navigation bar */
+.month-navigation {
+  display: flex;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 20px;
+  padding: 14px 16px 12px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  margin-bottom: 0;
 }
 
-.calendar-header button {
-  padding: 8px 16px;
-  background: #617afa;
-  color: white;
-  border: none;
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.month-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.month-selector h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #1f2937;
+}
+
+.dropdown-controls {
+  display: none; /* Hidden by default, shown when needed */
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.month-dropdown, .year-dropdown {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
   border-radius: 4px;
-  cursor: pointer;
+  font-size: 14px;
+  background: white;
 }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.calendar-cell {
-  aspect-ratio: 1;
+.nav-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  padding: 10px;
-  border: 1px solid #e5e7eb;
+  background: white;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-button:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+/* Show dropdowns when month name is clicked */
+.month-selector:hover .dropdown-controls {
+  display: flex;
+}
+
+/* Compact calendar grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  padding: 0 8px 8px;
+  background: #f9fafb;
+}
+
+.calendar-cell {
+  height: 55px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 2px 2px;
+  position: relative;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
 }
 
 .calendar-cell.header {
-  background: #f3f4f6;
+  height: auto;
+  padding: 10px 2px;
+  background: #f8f9fa;
   font-weight: 600;
   cursor: default;
+  color: #4b5563;
+  border-bottom: none;
+  margin-bottom: 2px;
 }
 
 .calendar-cell.empty {
@@ -283,72 +419,24 @@ const handleClose = () => {
   font-weight: bold;
 }
 
+.calendar-cell.selected {
+  background: #617afa;
+  color: white;
+}
+
+.calendar-cell.selected .event-dot {
+  background-color: white;
+}
+
 .calendar-cell.has-event {
   font-weight: bold;
-  color: #617afa;
-}
-
-.event-indicator {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  background: #617afa;
-  border-radius: 50%;
-}
-
-.event-panel {
-  margin-top: 20px;
-  padding: 20px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.event-item {
-  padding: 10px;
-  margin: 5px 0;
-  background: white;
-  border-radius: 4px;
-  border: 1px solid #e5e7eb;
-}
-
-@media (max-width: 640px) {
-  .calendar-container {
-    padding: 10px;
-    width: 100%;
-    max-width: none;
-  }
-
-  .calendar-header h2 {
-    font-size: 16px;
-  }
-
-  .calendar-grid {
-    gap: 2px;
-  }
-
-  .calendar-cell {
-    padding: 4px;
-    font-size: 12px;
-  }
-}
-
-.calendar-day {
-  position: relative;
-  padding-bottom: 16px;
 }
 
 .event-indicators {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  margin-top: auto;
   display: flex;
-  gap: 2px;
-  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
 }
 
 .event-dot {
@@ -358,53 +446,7 @@ const handleClose = () => {
   background-color: #617afa;
 }
 
-.event-count {
-  font-size: 10px;
-  color: #6b7280;
-}
-
-.event-tooltip {
-  display: none;
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  padding: 8px;
-  width: 200px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  z-index: 10;
-}
-
-.calendar-day:hover .event-tooltip {
-  display: block;
-}
-
-.event-item {
-  padding: 4px 0;
-}
-
-.event-link {
-  color: #617afa;
-  text-decoration: none;
-  font-size: 12px;
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.event-link:hover {
-  text-decoration: underline;
-}
-
-.has-events {
-  background-color: #f0f4ff;
-}
-
-.has-events:hover {
-  background-color: #e5ebff;
+.calendar-cell.selected .event-dot {
+  background-color: white;
 }
 </style>

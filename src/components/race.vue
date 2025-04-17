@@ -290,7 +290,7 @@ onUnmounted(() => {
                 <div class="popup-overlay" @click.self="closeCalendar">
                   <div class="popup-content">
                     <div class="popup-header">
-                      <h3 class="popup-title">Pilih Tanggal</h3>
+                      <h3 class="popup-title">Calendar</h3>
                       <button 
                         class="close-button"
                         @click="closeCalendar"
@@ -853,10 +853,10 @@ body.popup-open {
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
-  align-items: flex-start; 
-  padding-top: 80px; 
+  align-items: flex-start; /* Change from center to flex-start */
+  padding-top: 80px; /* Add padding at the top */
   z-index: 9999;
-  overflow-y: auto; /* Allow scrolling in overlay */
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -917,6 +917,10 @@ body.popup-open {
     align-items: flex-start;
     gap: 12px;
   }
+
+  .popup-overlay {
+    padding-top: 60px; /* Slightly reduced padding on mobile */
+  }
 }
 
 @media (max-width: 480px) {
@@ -930,6 +934,10 @@ body.popup-open {
 
   .title {
     font-size: 28px;
+  }
+
+  .popup-overlay {
+    padding-top: 40px; /* Further reduced on smaller devices */
   }
 }
 
@@ -1009,24 +1017,27 @@ body.popup-open {
   background: white;
   border-radius: 8px;
   width: 100%;
-  max-width: 400px;
-  max-height: 80vh; /* Limit height */
+  max-width: 1200px; /* Increased from 800px */
+  height: auto; /* Change from fixed height */
+  min-height: 400px; /* Add min-height */
+  max-height: 80vh; /* Limit maximum height */
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 10000; /* Tambahkan z-index */
   overflow: hidden; /* Tetap hidden untuk mencegah overflow */
-  margin: 0 auto; /* Center horizontally */
+  margin: 0 auto 20px; /* Changed from 20px auto */
   display: flex;
   flex-direction: column;
 }
 
 .calendar-container {
-  padding: 16px;
-  width: 100%; /* Set fixed width */
+  padding: 24px; /* Increased padding */
+  width: 100%;
   flex: 1;
   overflow-y: auto; /* Enable vertical scroll */
-  max-height: calc(80vh - 60px); /* Adjust based on header height */
   -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+  display: flex;
+  justify-content: center; /* Center calendar horizontally */
 }
 
 /* Pastikan calendar tidak melewati container */
@@ -1054,16 +1065,42 @@ body.popup-open {
   transform: scale(0.95);
 }
 
-/* Update responsive styles */
-@media (max-width: 480px) {
+/* Update responsive styles for different screen sizes */
+@media (min-width: 1920px) {
   .popup-content {
-    margin: 8px;
-    width: calc(100% - 16px); /* Kurangi margin dari total width */
+    max-width: 1400px;
+    min-height: 600px;
+  }
+}
+
+@media (max-width: 1366px) {
+  .popup-content {
+    max-width: 1000px;
+    margin: 16px;
+  }
+}
+
+@media (max-width: 880px) {
+  .popup-content {
+    margin: 16px;
+    width: calc(100% - 32px);
+    min-height: 300px;
   }
   
   .calendar-container {
-    padding: 8px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .popup-content {
+    margin: 8px;
+    width: calc(100% - 16px);
+    min-height: auto;
   }
   
+  .calendar-container {
+    padding: 12px;
+  }
 }
 </style>
