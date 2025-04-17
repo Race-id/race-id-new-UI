@@ -853,8 +853,8 @@ body.popup-open {
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* Ubah dari center ke flex-start */
-  padding-top: 80px; /* Kurangi padding top */
+  align-items: flex-start; 
+  padding-top: 80px; 
   z-index: 9999;
   overflow-y: auto; /* Allow scrolling in overlay */
   -webkit-overflow-scrolling: touch;
