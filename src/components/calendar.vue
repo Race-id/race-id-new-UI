@@ -1,18 +1,84 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-
-defineProps({
-  events: {
-    type: Array,
-    default: () => []
-  }
-})
+import { ref, computed, onMounted } from 'vue';
+import events from '../components/data/events.json';
 
 const emit = defineEmits(['select-date', 'close'])
 
 const currentDate = ref(new Date())
 const selectedDate = ref(null)
-const events = ref([])
+
+// Update raceEvents computed property with better date validation
+const raceEvents = computed(() => {
+  if (!events || !Array.isArray(events)) return [];
+  
+  return events
+    .filter(event => event.date)
+    .map(event => {
+      try {
+        // First try parsing with Date constructor
+        let eventDate = new Date(event.date);
+        
+        // Check if date is valid
+        if (isNaN(eventDate.getTime())) {
+          // If invalid, try parsing from year property
+          if (event.year) {
+            // Assume January 1st of the year if only year is available
+            eventDate = new Date(parseInt(event.year), 0, 1);
+          } else {
+            return null;
+          }
+        }
+
+        return {
+          ...event,
+          date: eventDate
+        };
+      } catch (e) {
+        console.error(`Invalid date for event "${event.title}":`, event.date);
+        return null;
+      }
+    })
+    .filter(Boolean); // Remove null entries
+});
+
+// Group events by date for easier lookup
+const eventsByDate = computed(() => {
+  const grouped = {};
+  raceEvents.value.forEach(event => {
+    try {
+      const dateStr = event.date.toISOString().split('T')[0];
+      if (!grouped[dateStr]) {
+        grouped[dateStr] = [];
+      }
+      grouped[dateStr].push(event);
+    } catch (e) {
+      console.error('Error processing event:', event);
+    }
+  });
+  return grouped;
+});
+
+// Check if date has events
+const hasEvents = (date) => {
+  if (!date) return false;
+  try {
+    const dateStr = date.toISOString().split('T')[0];
+    return !!eventsByDate.value[dateStr];
+  } catch (e) {
+    return false;
+  }
+};
+
+// Get events for specific date
+const getEventsForDate = (date) => {
+  if (!date) return [];
+  try {
+    const dateStr = date.toISOString().split('T')[0];
+    return eventsByDate.value[dateStr] || [];
+  } catch (e) {
+    return [];
+  }
+};
 
 // Nama-nama hari dan bulan dalam Bahasa Indonesia
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -49,16 +115,12 @@ const calendarDays = computed(() => {
   // Add actual days
   for (let i = 1; i <= totalDays; i++) {
     const date = new Date(currentYear.value, currentDate.value.getMonth(), i)
-    const hasEvent = events.value.some(event => {
-      const eventDate = new Date(event.date)
-      return eventDate.toDateString() === date.toDateString()
-    })
 
     days.push({
       day: i,
       isEmpty: false,
       isToday: isToday(date),
-      hasEvent,
+      hasEvent: hasEvents(date),
       date
     })
   }
@@ -83,10 +145,7 @@ const nextMonth = () => {
 const selectDate = (day) => {
   if (!day.isEmpty) {
     selectedDate.value = day.date
-    const dayEvents = events.value.filter(event => {
-      const eventDate = new Date(event.date)
-      return eventDate.toDateString() === day.date.toDateString()
-    })
+    const dayEvents = getEventsForDate(day.date)
     emit('select-date', { date: day.date, events: dayEvents })
   }
 }
@@ -95,20 +154,6 @@ const selectDate = (day) => {
 const handleClose = () => {
   emit('close')
 }
-
-// Fetch events (contoh data)
-onMounted(async () => {
-  // Simulasi fetch data events
-  events.value = [
-    {
-      id: 1,
-      title: 'Jakarta Marathon',
-      date: '2024-04-15',
-      location: 'Jakarta'
-    },
-    // ... more events
-  ]
-})
 </script>
 
 <template>
@@ -137,23 +182,43 @@ onMounted(async () => {
         :class="{
           'empty': day.isEmpty,
           'today': day.isToday,
-          'has-event': day.hasEvent
+          'has-event': !day.isEmpty && day.hasEvent
         }"
         @click="selectDate(day)"
       >
         {{ day.day }}
-        <span v-if="day.hasEvent" class="event-indicator"></span>
+        
+        <!-- Event indicator -->
+        <div v-if="!day.isEmpty && day.hasEvent" class="event-indicators">
+          <span class="event-dot"></span>
+          <span v-if="getEventsForDate(day.date).length > 1" 
+                class="event-count">
+            {{ getEventsForDate(day.date).length }}
+          </span>
+        </div>
+
+        <!-- Tooltip with event details -->
+        <div v-if="!day.isEmpty && day.hasEvent" class="event-tooltip">
+          <div v-for="event in getEventsForDate(day.date)" 
+               :key="event.title" 
+               class="event-item">
+            <a :href="event.url" 
+               target="_blank" 
+               class="event-link">
+              {{ event.title }}
+            </a>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Event Modal/Panel -->
+    <!-- Event panel -->
     <div v-if="selectedDate" class="event-panel">
       <h3>{{ selectedDate.toLocaleDateString() }}</h3>
-      <div v-for="event in events.filter(e => 
-        new Date(e.date).toDateString() === selectedDate.toDateString()
-      )" :key="event.id" class="event-item">
+      <div v-for="event in getEventsForDate(selectedDate)" 
+           :key="event.title" 
+           class="event-item">
         <h4>{{ event.title }}</h4>
-        <p>{{ event.location }}</p>
       </div>
     </div>
   </div>
@@ -269,5 +334,77 @@ onMounted(async () => {
     padding: 4px;
     font-size: 12px;
   }
+}
+
+.calendar-day {
+  position: relative;
+  padding-bottom: 16px;
+}
+
+.event-indicators {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.event-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #617afa;
+}
+
+.event-count {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.event-tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 8px;
+  width: 200px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.calendar-day:hover .event-tooltip {
+  display: block;
+}
+
+.event-item {
+  padding: 4px 0;
+}
+
+.event-link {
+  color: #617afa;
+  text-decoration: none;
+  font-size: 12px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-link:hover {
+  text-decoration: underline;
+}
+
+.has-events {
+  background-color: #f0f4ff;
+}
+
+.has-events:hover {
+  background-color: #e5ebff;
 }
 </style>
