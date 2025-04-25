@@ -1,11 +1,64 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import events from '../components/data/events.json';
+import events from '../components/data/events.json'; 
 
-const emit = defineEmits(['select-date', 'close'])
+const emit = defineEmits(['select-date']) 
 
 const currentDate = ref(new Date())
 const selectedDate = ref(null)
+const apiEvents = ref([])
+
+// Fungsi untuk mengambil data dari API
+const fetchApiEvents = async () => {
+  try {
+    const response = await fetch('https://steelytoe.com/dev.titudev.com/api/v1/resources/event_public_header')
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch events')
+    }
+
+    const data = await response.json()
+    
+    // Transform API data
+    const eventsList = Array.isArray(data) ? data : data.data || []
+    
+    // Konversi format API ke format events yang dibutuhkan kalender
+    apiEvents.value = eventsList.map(event => {
+      try {
+        // Validasi tanggal
+        const startDate = new Date(event.evnhStartDate)
+        if (isNaN(startDate.getTime())) {
+          console.warn(`Invalid date for event ${event.evnhName}:`, event.evnhStartDate)
+          return null // Skip event jika tanggal tidak valid
+        }
+        
+        return {
+          id: event.evnhId,
+          title: event.evnhName,
+          date: startDate,
+          location: event.evnhLocation || 'Location TBD',
+          url: `/race-detail/${event.evnhId}`,
+          image: event.evnhImage || '/images/placeholder.jpg'
+        }
+      } catch (e) {
+        console.error('Error processing event:', e)
+        return null
+      }
+    }).filter(Boolean) // Hilangkan null items
+  } catch (err) {
+    console.error('Error fetching API events:', err)
+  }
+}
+
+// Panggil fetchApiEvents saat komponen di-mount
+onMounted(() => {
+  fetchApiEvents()
+})
+
+// Gabungkan events dari JSON lokal dan API
+const combinedEvents = computed(() => {
+  return [...raceEvents.value, ...apiEvents.value]
+})
 
 // Update raceEvents computed property with better date validation
 const raceEvents = computed(() => {
@@ -44,8 +97,13 @@ const raceEvents = computed(() => {
 // Group events by date for easier lookup
 const eventsByDate = computed(() => {
   const grouped = {};
-  raceEvents.value.forEach(event => {
+  combinedEvents.value.forEach(event => {
     try {
+      // Pastikan event.date adalah date yang valid
+      if (!event.date || isNaN(event.date.getTime())) {
+        return; // Skip event jika tanggal tidak valid
+      }
+      
       const dateStr = event.date.toISOString().split('T')[0];
       if (!grouped[dateStr]) {
         grouped[dateStr] = [];
@@ -80,12 +138,11 @@ const getEventsForDate = (date) => {
   }
 };
 
-// Nama-nama hari dan bulan dalam Bahasa Indonesia
+// Nama-nama hari dan bulan
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 
                 'July', 'August', 'September', 'October', 'November', 'December']
 
-// Computed properties untuk kalendar
 const currentMonth = computed(() => MONTHS[currentDate.value.getMonth()])
 const currentYear = computed(() => currentDate.value.getFullYear())
 
@@ -156,12 +213,9 @@ const selectDate = (day) => {
   }
 }
 
-// Add close handler
-const handleClose = () => {
-  emit('close')
-}
+// Hapus method handleClose karena tidak digunakan
 
-// New refs for dropdown selectors
+// Refs for dropdown selectors
 const selectedMonthIndex = ref(currentDate.value.getMonth())
 const selectedYear = ref(currentDate.value.getFullYear())
 
@@ -175,7 +229,7 @@ const yearOptions = computed(() => {
   return years;
 });
 
-// New navigation functions
+// Navigation functions
 const updateMonth = () => {
   currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value);
 }
@@ -184,12 +238,7 @@ const updateYear = () => {
   currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value);
 }
 
-const goToToday = () => {
-  const today = new Date();
-  currentDate.value = today;
-  selectedMonthIndex.value = today.getMonth();
-  selectedYear.value = today.getFullYear();
-}
+// Hapus method goToToday karena tidak digunakan dalam template
 </script>
 
 <template>

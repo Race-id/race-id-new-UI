@@ -132,13 +132,15 @@ const calendarDate = computed(() => {
 })
 
 // Add method to handle date selection
-const handleDateSelect = (selectedDate) => {
+const handleDateSelect = (data) => {
   // Jangan langsung tutup popup
-  if (selectedDate) {
+  if (data && data.date && !isNaN(data.date.getTime())) {
     // Filter races berdasarkan tanggal yang dipilih
-    const selected = new Date(selectedDate)
+    const selected = new Date(data.date)
     // Implementasi filter logic disini
     console.log('Selected date:', selected)
+  } else {
+    console.warn('Invalid date selected')
   }
 }
 
@@ -854,7 +856,7 @@ body.popup-open {
   display: flex;
   justify-content: center;
   align-items: flex-start; /* Change from center to flex-start */
-  padding-top: 80px; /* Add padding at the top */
+  padding-top: 80px; /* Add padding at the top */;
   z-index: 9999;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
