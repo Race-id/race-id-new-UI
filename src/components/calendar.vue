@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import events from '../components/data/events.json';
 
-const emit = defineEmits(['select-date']) 
+const emit = defineEmits(['select-date', 'show-header']) 
 
 const currentDate = ref(new Date())
 const selectedDate = ref(null)
@@ -11,8 +11,15 @@ const currentView = ref('month') // 'month' or 'day'
 const selectedEvent = ref(null)
 const currentTimeInterval = ref(null)
 
-// Fetch events from API endpoint
+// Animation control variables
+const isLoading = ref(false)
+const slideDirection = ref('right')
+const isTransitioning = ref(false)
+const viewTransitionName = ref('fade-scale')
+
+// Fetch events from API endpoint with loading animation
 const fetchApiEvents = async () => {
+  isLoading.value = true
   try {
     const response = await fetch('https://steelytoe.com/dev.titudev.com/api/v1/resources/event_public_header')
     
@@ -47,6 +54,11 @@ const fetchApiEvents = async () => {
     }).filter(Boolean)
   } catch (err) {
     console.error('Error fetching API events:', err)
+  } finally {
+    // Add slight delay to make loading animation visible
+    setTimeout(() => {
+      isLoading.value = false
+    }, 300)
   }
 }
 
@@ -57,13 +69,25 @@ onMounted(() => {
   currentTimeInterval.value = setInterval(() => {
     currentDate.value = new Date()
   }, 60000)
+
+  if (calendarBodyRef.value) {
+    calendarBodyRef.value.addEventListener('scroll', handleScroll)
+  }
 })
 
-const onBeforeUnmount = () => {
+// Improved lifecycle hook
+const cleanupTimers = () => {
   if (currentTimeInterval.value) {
     clearInterval(currentTimeInterval.value)
   }
 }
+
+onBeforeUnmount(() => {
+  cleanupTimers()
+  if (calendarBodyRef.value) {
+    calendarBodyRef.value.removeEventListener('scroll', handleScroll)
+  }
+})
 
 // Combine events from local JSON and API
 const combinedEvents = computed(() => {
@@ -109,11 +133,15 @@ const eventsByDate = computed(() => {
         return
       }
       
-      const dateStr = event.date.toISOString().split('T')[0]
+      const year = event.date.getFullYear();
+      const month = event.date.getMonth() + 1;
+      const day = event.date.getDate();
+      const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      
       if (!grouped[dateStr]) {
-        grouped[dateStr] = []
+        grouped[dateStr] = [];
       }
-      grouped[dateStr].push(event)
+      grouped[dateStr].push(event);
     } catch (e) {
       console.error('Error processing event:', event)
     }
@@ -125,8 +153,11 @@ const eventsByDate = computed(() => {
 const hasEvents = (date) => {
   if (!date) return false
   try {
-    const dateStr = date.toISOString().split('T')[0]
-    return !!eventsByDate.value[dateStr]
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    return !!eventsByDate.value[dateStr];
   } catch (e) {
     return false
   }
@@ -136,10 +167,22 @@ const hasEvents = (date) => {
 const getEventsForDate = (date) => {
   if (!date) return []
   try {
-    const dateStr = date.toISOString().split('T')[0]
-    return eventsByDate.value[dateStr] || []
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dateStr = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    
+    return combinedEvents.value.filter(event => {
+      if (!event.date) return false;
+      const eventYear = event.date.getFullYear();
+      const eventMonth = event.date.getMonth() + 1;
+      const eventDay = event.date.getDate();
+      const eventDateStr = `${eventYear}-${eventMonth.toString().padStart(2, '0')}-${eventDay.toString().padStart(2, '0')}`;
+      return eventDateStr === dateStr;
+    });
   } catch (e) {
-    return []
+    console.error('Error getting events for date:', e);
+    return [];
   }
 }
 
@@ -196,34 +239,75 @@ const isToday = (date) => {
   return date.toDateString() === today.toDateString()
 }
 
+// Animated month navigation
 const previousMonth = () => {
-  const newDate = new Date(currentYear.value, currentDate.value.getMonth() - 1);
-  currentDate.value = newDate;
-  selectedMonthIndex.value = newDate.getMonth();
-  selectedYear.value = newDate.getFullYear();
+  if (isTransitioning.value) return
+  
+  slideDirection.value = 'right'
+  isTransitioning.value = true
+  
+  setTimeout(() => {
+    const newDate = new Date(currentYear.value, currentDate.value.getMonth() - 1)
+    currentDate.value = newDate
+    selectedMonthIndex.value = newDate.getMonth()
+    selectedYear.value = newDate.getFullYear()
+    
+    setTimeout(() => {
+      isTransitioning.value = false
+    }, 100)
+  }, 250)
 }
 
 const nextMonth = () => {
-  const newDate = new Date(currentYear.value, currentDate.value.getMonth() + 1);
-  currentDate.value = newDate;
-  selectedMonthIndex.value = newDate.getMonth();
-  selectedYear.value = newDate.getFullYear();
+  if (isTransitioning.value) return
+  
+  slideDirection.value = 'left'
+  isTransitioning.value = true
+  
+  setTimeout(() => {
+    const newDate = new Date(currentYear.value, currentDate.value.getMonth() + 1)
+    currentDate.value = newDate
+    selectedMonthIndex.value = newDate.getMonth()
+    selectedYear.value = newDate.getFullYear()
+    
+    setTimeout(() => {
+      isTransitioning.value = false
+    }, 100)
+  }, 250)
 }
 
+// Add auto-scroll when switching to day view
+const switchToDayView = (date) => {
+  viewTransitionName.value = 'zoom-fade'
+  selectedDate.value = date
+  
+  setTimeout(() => {
+    currentView.value = 'day'
+    scrollToTop()
+  }, 100)
+}
+
+const switchToMonthView = () => {
+  viewTransitionName.value = 'slide-up'
+  
+  setTimeout(() => {
+    currentView.value = 'month'
+  }, 100)
+}
+
+// Update selectDate to use auto-scroll when switching to day view
 const selectDate = (day) => {
   if (!day.isEmpty) {
     selectedDate.value = day.date
     const dayEvents = getEventsForDate(day.date)
     emit('select-date', { date: day.date, events: dayEvents })
     
-    // Switch to day view if the day has events
+    // Add animation when switching to day view with events
     if (dayEvents.length > 0) {
-      currentView.value = 'day';
+      switchToDayView(day.date)
     }
   }
 }
-
-// Hapus method handleClose karena tidak digunakan
 
 // Refs for dropdown selectors
 const selectedMonthIndex = ref(currentDate.value.getMonth())
@@ -231,80 +315,80 @@ const selectedYear = ref(currentDate.value.getFullYear())
 
 // Generate year options (5 years before and after current year)
 const yearOptions = computed(() => {
-  const currentYear = new Date().getFullYear();
-  const years = [];
+  const currentYear = new Date().getFullYear()
+  const years = []
   for (let i = currentYear - 5; i <= currentYear + 5; i++) {
-    years.push(i);
+    years.push(i)
   }
-  return years;
-});
+  return years
+})
 
 // Navigation functions
 const updateMonth = () => {
-  currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value);
+  currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value)
 }
 
 const updateYear = () => {
-  currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value);
+  currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value)
 }
 
 // Go to today
 const goToToday = () => {
-  const today = new Date();
+  const today = new Date()
   
   if (currentView.value === 'month') {
-    currentDate.value = today;
-    selectedMonthIndex.value = today.getMonth();
-    selectedYear.value = today.getFullYear();
+    currentDate.value = today
+    selectedMonthIndex.value = today.getMonth()
+    selectedYear.value = today.getFullYear()
     
     // Find today in the calendar days and select it
-    const todayObj = calendarDays.value.find(day => !day.isEmpty && day.isToday);
+    const todayObj = calendarDays.value.find(day => !day.isEmpty && day.isToday)
     if (todayObj) {
-      selectDate(todayObj);
+      selectDate(todayObj)
     }
   } else {
-    selectedDate.value = today;
+    selectedDate.value = today
   }
-};
+}
 
 // NEW METHODS FOR DAY VIEW
 
 // Get events for the selected day
 const getDayEvents = computed(() => {
-  if (!selectedDate.value) return [];
+  if (!selectedDate.value) return []
   
-  return getEventsForDate(selectedDate.value);
-});
+  return getEventsForDate(selectedDate.value)
+})
 
 // Calculate position and height for event blocks
 const getEventPositionStyle = (event, index) => {
   // Dapatkan index event dalam array
   const eventIndex = getDayEvents.value.findIndex(e => 
     (e.id || e.title) === (event.id || event.title)
-  );
+  )
   
   // Hitung jumlah event
-  const totalEvents = getDayEvents.value.length;
+  const totalEvents = getDayEvents.value.length
   
   // Tetapkan semua event mulai jam 6 pagi tepat
-  const startHour = 6; // 6 AM
+  const startHour = 6 // 6 AM
   
   // Hitung posisi untuk jam 6 pagi (dalam timeline 6AM-12PM)
   // Dalam timeline 6 jam, jam 6 adalah di posisi 0%
-  const topPosition = 0;
+  const topPosition = 0
   
   // Hitung lebar per event berdasarkan jumlah event
   const widthPercentage = totalEvents === 1 
     ? 80  // Jika hanya 1 event, beri lebar 80%
-    : Math.max(30, 90 / totalEvents); // Minimal 30% lebar
+    : Math.max(30, 90 / totalEvents) // Minimal 30% lebar
   
   // Hitung posisi left dengan margin lebih sesuai
   const leftPosition = totalEvents === 1
     ? 10  // Jika hanya 1 event, tempatkan di tengah (10% dari kiri)
-    : (eventIndex * widthPercentage) + 5; // 5% margin dari kiri
+    : (eventIndex * widthPercentage) + 5 // 5% margin dari kiri
   
   // Height yang lebih besar untuk semua event
-  const heightPercentage = 15; 
+  const heightPercentage = 15 
   
   return {
     top: `${topPosition}%`,
@@ -312,51 +396,57 @@ const getEventPositionStyle = (event, index) => {
     left: `${leftPosition}%`,
     width: `${widthPercentage - 2}%`, // Kurangi 2% untuk margin antar event
     position: 'absolute'
-  };
-};
+  }
+}
 
 // Format time untuk event blocks - menampilkan waktu 6 AM untuk semua event
 const formatEventTime = (event) => {
   // Semua event mulai jam 6 pagi
-  return "6:00 AM";
-};
+  return "6:00 AM"
+}
 
 // Format date for event modal
 const formatEventDate = (event) => {
-  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  return event.date.toLocaleDateString([], options);
-};
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+  return event.date.toLocaleDateString([], options)
+}
 
 // Check if two dates are the same day
 const isSameDay = (date1, date2) => {
   if (!date1 || !date2) return false;
-  return date1.toDateString() === date2.toDateString();
-};
+  return (
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate()
+  );
+}
 
 // Navigation for day view
 const previousDay = () => {
-  if (!selectedDate.value) return;
+  if (!selectedDate.value) return
   
-  const prevDay = new Date(selectedDate.value);
-  prevDay.setDate(prevDay.getDate() - 1);
-  selectedDate.value = prevDay;
-};
+  const prevDay = new Date(selectedDate.value)
+  prevDay.setDate(prevDay.getDate() - 1)
+  selectedDate.value = prevDay
+  scrollToTop()
+}
 
 const nextDay = () => {
-  if (!selectedDate.value) return;
+  if (!selectedDate.value) return
   
-  const nextDay = new Date(selectedDate.value);
-  nextDay.setDate(nextDay.getDate() + 1);
-  selectedDate.value = nextDay;
-};
+  const nextDay = new Date(selectedDate.value)
+  nextDay.setDate(nextDay.getDate() + 1)
+  selectedDate.value = nextDay
+  scrollToTop()
+}
 
 // Get event color
 const getEventColor = (event) => {
   // Generate color based on event ID or title
-  const identifier = event.id || event.title;
+  const identifier = event.id || event.title
   const hash = Array.from(identifier.toString()).reduce((acc, char) => {
-    return char.charCodeAt(0) + ((acc << 5) - acc);
-  }, 0);
+    return char.charCodeAt(0) + ((acc << 5) - acc)
+  }, 0)
   
   // Use predefined colors for consistency
   const colors = [
@@ -367,204 +457,254 @@ const getEventColor = (event) => {
     '#8e24aa', // Purple
     '#0097a7', // Teal
     '#f57c00', // Orange
-  ];
+  ]
   
-  return colors[Math.abs(hash) % colors.length];
-};
+  return colors[Math.abs(hash) % colors.length]
+}
 
 // Get event preview for month view
 const getEventPreviewForDate = (date) => {
-  const events = getEventsForDate(date);
-  return events.slice(0, 2); // Only show first 2 events
-};
+  const events = getEventsForDate(date)
+  return events.slice(0, 2) // Only show first 2 events
+}
 
 // View event details
 const viewEventDetails = (event) => {
-  selectedEvent.value = event;
-};
+  selectedEvent.value = event
+  scrollToTop()
+}
 
 // Close event details
 const closeEventDetails = () => {
-  selectedEvent.value = null;
-};
+  selectedEvent.value = null
+  scrollToTop()
+}
 
-// View all events for a date
+// Update the existing viewAllEvents method to use the new auto-scroll function
 const viewAllEvents = (date) => {
-  selectedDate.value = date;
-  currentView.value = 'day';
-};
+  switchToDayView(date)
+}
+
+// Helper function untuk scroll ke atas
+const scrollToTop = (delay = 50) => {
+  setTimeout(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  }, delay)
+}
+
+// Add prop to identify if calendar is in popup
+const props = defineProps({
+  isInPopup: {
+    type: Boolean,
+    default: false
+  }
+})
+
+// Add scroll detection
+const isHeaderScrolled = ref(false)
+const calendarBodyRef = ref(null)
+
+// Track scroll position
+const handleScroll = () => {
+  if (calendarBodyRef.value) {
+    isHeaderScrolled.value = calendarBodyRef.value.scrollTop > 0
+  }
+}
+
+// Emit event untuk trigger header
+const showMainHeader = () => {
+  emit('show-header');
+}
 </script>
 
 <template>
-  <div class="google-calendar">
-    
-    <!-- Month View -->
-    <div v-if="currentView === 'month'" class="month-view">
-      <!-- Calendar Header -->
-      <div class="calendar-header">
-        <div class="header-left">
-          <div class="nav-buttons">
-            <button @click="previousMonth" class="nav-button">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <button @click="nextMonth" class="nav-button">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          </div>
-          <h2 class="current-date">{{ currentMonth }} {{ currentYear }}</h2>
-        </div>
-        
-        <div class="view-options">
-          <select v-model="selectedMonthIndex" @change="updateMonth" class="month-dropdown">
-            <option v-for="(month, index) in MONTHS" :key="month" :value="index">{{ month }}</option>
-          </select>
-          <select v-model="selectedYear" @change="updateYear" class="year-dropdown">
-            <option v-for="year in yearOptions" :key="year" :value="year">{{ year }}</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Calendar Grid -->
-      <div class="calendar-body">
-        <!-- Weekday Headers -->
-        <div class="weekday-row">
-          <div v-for="day in DAYS" :key="day" class="weekday-header">{{ day }}</div>
-        </div>
-        
-        <!-- Calendar Days -->
-        <div class="month-grid">
-          <div 
-            v-for="(day, index) in calendarDays" 
-            :key="index"
-            class="day-cell" 
-            :class="{
-              'empty': day.isEmpty,
-              'today': day.isToday,
-              'selected': selectedDate && !day.isEmpty && day.date.toDateString() === selectedDate.toDateString()
-            }"
-            @click="selectDate(day)"
-          >
-            <!-- Date Number -->
-            <div class="date-number" :class="{ 'has-event': !day.isEmpty && day.hasEvent }">
-              {{ day.day }}
-            </div>
-            
-            <!-- Event List (mini previews) -->
-            <div v-if="!day.isEmpty" class="event-list">
-              <div 
-                v-for="(event, eventIndex) in getEventPreviewForDate(day.date)"
-                :key="eventIndex"
-                class="event-preview"
-                :style="{ backgroundColor: getEventColor(event) }"
-                @click.stop="viewEventDetails(event)"
-              >
-                {{ event.title }}
-              </div>
-              
-              <!-- "More" indicator if there are more events -->
-              <div 
-                v-if="getEventsForDate(day.date).length > 2" 
-                class="more-events"
-                @click.stop="viewAllEvents(day.date)"
-              >
-                +{{ getEventsForDate(day.date).length - 2 }} more
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="google-calendar" :class="{ 'in-popup': isInPopup }">
+    <!-- Loading overlay with animation -->
+    <div v-if="isLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
     </div>
     
-    <!-- Day View -->
-    <div v-else-if="currentView === 'day' && selectedDate" class="day-view">
-      <!-- Day View Header -->
-      <div class="day-view-header">
-        <div class="header-top">
-          <button @click="currentView = 'month'" class="back-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            Back to Calendar
-          </button>
-        </div>
-        
-        <div class="header-main">
-          <h2>{{ selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) }}</h2>
+    <!-- Animated view switching -->
+    <transition :name="viewTransitionName" mode="out-in">
+      <!-- Month View -->
+      <div v-if="currentView === 'month'" :key="'month-view'" class="month-view">
+        <!-- Calendar Header -->
+        <div class="calendar-header" :class="{ 'scrolled': isHeaderScrolled }" @mouseenter="showMainHeader">
+          <div class="header-left">
+            <div class="nav-buttons">
+              <button @click="previousMonth" class="nav-button" :disabled="isTransitioning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button @click="nextMonth" class="nav-button" :disabled="isTransitioning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
+            <h2 class="current-date">{{ currentMonth }} {{ currentYear }}</h2>
+          </div>
           
-          <div class="day-navigation">
-            <button @click="previousDay" class="nav-button">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <button @click="nextDay" class="nav-button">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
+          <div class="view-options">
+            <select v-model="selectedMonthIndex" @change="updateMonth" class="month-dropdown">
+              <option v-for="(month, index) in MONTHS" :key="month" :value="index">{{ month }}</option>
+            </select>
+            <select v-model="selectedYear" @change="updateYear" class="year-dropdown">
+              <option v-for="year in yearOptions" :key="year" :value="year">{{ year }}</option>
+            </select>
           </div>
         </div>
-      </div>
-      
-      <!-- Event count info -->
-      <div class="day-view-info">
-        <div class="event-count">
-          {{ getDayEvents.length }} Events on this day
-        </div>
-      </div>
-      
-      <!-- List View -->
-      <div class="day-list-view">
-        <div v-if="getDayEvents.length === 0" class="no-events-placeholder">
-          <div class="empty-day-message">No events scheduled for this day</div>
-        </div>
-        
-        <div v-else class="events-list">
-          <div 
-            v-for="event in getDayEvents" 
-            :key="event.id || event.title" 
-            class="list-event-item"
-            @click="viewEventDetails(event)"
-          >
-            <div class="event-color-marker" :style="{ backgroundColor: getEventColor(event) }"></div>
-            <div class="event-details">
-              <div class="event-title-list">{{ event.title }}</div>
-              <div v-if="event.location" class="event-location-list">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                {{ event.location }}
+
+        <!-- Calendar Grid with animations -->
+        <div class="calendar-body" ref="calendarBodyRef">
+          <!-- Weekday Headers -->
+          <div class="weekday-row">
+            <div v-for="day in DAYS" :key="day" class="weekday-header">{{ day }}</div>
+          </div>
+          
+          <!-- Calendar Days with transition -->
+          <transition :name="slideDirection === 'left' ? 'slide-left' : 'slide-right'" mode="out-in">
+            <div 
+              :key="currentDate.getMonth() + '-' + currentDate.getFullYear()" 
+              class="month-grid"
+            >
+              <div 
+                v-for="(day, index) in calendarDays" 
+                :key="index"
+                class="day-cell" 
+                :class="{
+                  'empty': day.isEmpty,
+                  'today': day.isToday,
+                  'selected': selectedDate && !day.isEmpty && day.date.toDateString() === selectedDate.toDateString(),
+                  'has-events': !day.isEmpty && day.hasEvent
+                }"
+                @click="selectDate(day)"
+              >
+                <!-- Date Number -->
+                <div class="date-number" :class="{ 'has-event': !day.isEmpty && day.hasEvent }">
+                  {{ day.day }}
+                </div>
+                
+                <!-- Event List with animated previews -->
+                <div v-if="!day.isEmpty" class="event-list">
+                  <transition-group name="list-animation">
+                    <div 
+                      v-for="(event, eventIndex) in getEventPreviewForDate(day.date)"
+                      :key="eventIndex"
+                      class="event-preview"
+                      :style="{ backgroundColor: getEventColor(event) }"
+                      @click.stop="viewEventDetails(event)"
+                    >
+                      {{ event.title }}
+                    </div>
+                  </transition-group>
+                  
+                  <!-- "More" indicator if there are more events -->
+                  <div 
+                    v-if="getEventsForDate(day.date).length > 2" 
+                    class="more-events"
+                    @click.stop="viewAllEvents(day.date)"
+                  >
+                    +{{ getEventsForDate(day.date).length - 2 }} more
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="event-actions">
-              <a :href="event.url" class="event-link-small" @click.stop target="_blank">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+          </transition>
+        </div>
+      </div>
+      
+      <!-- Day View with animations -->
+      <div v-else-if="currentView === 'day' && selectedDate" :key="'day-view'" class="day-view">
+        <!-- Day View Header -->
+        <div class="day-view-header">
+          <div class="header-top">
+            <button @click="switchToMonthView" class="back-button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              Back to Calendar
+            </button>
+          </div>
+          
+          <div class="header-main">
+            <h2>{{ selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) }}</h2>
+            
+            <div class="day-navigation">
+              <button @click="previousDay" class="nav-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button @click="nextDay" class="nav-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Day view event list with staggered animations -->
+        <div class="day-list-view">
+          <div v-if="getDayEvents.length === 0" class="no-events-placeholder">
+            <div class="empty-day-message">No events scheduled for this day</div>
+          </div>
+          
+          <transition-group 
+            name="list-animation" 
+            tag="div" 
+            class="events-list"
+          >
+            <div 
+              v-for="(event, index) in getDayEvents" 
+              :key="event.id || event.title" 
+              class="list-event-item"
+              :style="{ animationDelay: index * 0.05 + 's' }"
+              @click="viewEventDetails(event)"
+            >
+              <div class="event-color-marker" :style="{ backgroundColor: getEventColor(event) }"></div>
+              <div class="event-details">
+                <div class="event-title-list">{{ event.title }}</div>
+                <div v-if="event.location" class="event-location-list">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  {{ event.location }}
+                </div>
+              </div>
+              <div class="event-actions">
+                <a :href="event.url" class="event-link-small" @click.stop target="_blank">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+              </div>
+            </div>
+          </transition-group>
+        </div>
+      </div>
+    </transition>
+    
+    <!-- Event Details Modal with animation -->
+    <transition name="modal-fade">
+      <div v-if="selectedEvent" class="event-modal" @click="closeEventDetails">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header" :style="{ backgroundColor: getEventColor(selectedEvent) }">
+            <button @click="closeEventDetails" class="close-button">×</button>
+            <h3>{{ selectedEvent.title }}</h3>
+            <div class="event-date">{{ formatEventDate(selectedEvent) }}</div>
+          </div>
+          
+          <div class="modal-body">
+            <div v-if="selectedEvent.location" class="modal-field">
+              <div class="field-label">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Location
+              </div>
+              <div class="field-value">{{ selectedEvent.location }}</div>
+            </div>
+            
+            <div class="modal-actions">
+              <a :href="selectedEvent.url" class="event-link" target="_blank">
+                View Event Details
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
               </a>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Event Details Modal -->
-    <div v-if="selectedEvent" class="event-modal" @click="closeEventDetails">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header" :style="{ backgroundColor: getEventColor(selectedEvent) }">
-          <button @click="closeEventDetails" class="close-button">×</button>
-          <h3>{{ selectedEvent.title }}</h3>
-          <div class="event-date">{{ formatEventDate(selectedEvent) }}</div>
-        </div>
-        
-        <div class="modal-body">
-          <div v-if="selectedEvent.location" class="modal-field">
-            <div class="field-label">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              Location
-            </div>
-            <div class="field-value">{{ selectedEvent.location }}</div>
-          </div>
-          
-          <div class="modal-actions">
-            <a :href="selectedEvent.url" class="event-link" target="_blank">
-              View Event Details
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+    </transition>
   </div>
 </template>
 
@@ -607,6 +747,7 @@ const viewAllEvents = (date) => {
 .month-view {
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 /* Calendar Header */
@@ -616,6 +757,17 @@ const viewAllEvents = (date) => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0; /* Default untuk di dalam popup */
+  background: white;
+  z-index: 5;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Ketika calendar digunakan di halaman utama (bukan dalam popup) */
+.google-calendar:not(.in-popup) .calendar-header {
+  top: 80px; /* Sesuaikan dengan tinggi header website Anda */
 }
 
 .header-left {
@@ -685,6 +837,8 @@ const viewAllEvents = (date) => {
 
 /* Calendar Grid Styles */
 .calendar-body {
+  overflow-y: auto;
+  flex-grow: 1;
   padding: 0;
 }
 
@@ -708,8 +862,11 @@ const viewAllEvents = (date) => {
   grid-template-columns: repeat(7, 1fr);
   grid-auto-rows: minmax(100px, auto);
   border-left: 1px solid #e0e0e0;
+  transition: opacity 0.3s ease-in-out;
+  animation: fadeIn 0.4s ease-in-out;
 }
 
+/* Animation for day cells */
 .day-cell {
   border-right: 1px solid #e0e0e0;
   border-bottom: 1px solid #e0e0e0;
@@ -717,11 +874,13 @@ const viewAllEvents = (date) => {
   min-height: 100px;
   cursor: pointer;
   position: relative;
-  transition: background 0.1s;
+  transition: all 0.2s ease-in-out;
 }
 
 .day-cell:hover {
   background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .day-cell.empty {
@@ -760,16 +919,26 @@ const viewAllEvents = (date) => {
   font-size: 12px;
 }
 
+/* Event styles for month view */
 .event-preview {
-  padding: 2px 4px;
-  border-radius: 4px;
+  padding: 3px 6px;  
+  border-radius: 6px; 
   color: white;
-  margin-bottom: 2px;
+  margin-bottom: 3px; 
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15); /* Shadow lebih terlihat */
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-origin: left center;
+  border: 1px solid rgba(255,255,255,0.15); /* Tambahkan border tipis */
+}
+
+.event-preview:hover {
+  transform: scale(1.05) translateX(2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  z-index: 5;
 }
 
 .more-events {
@@ -793,6 +962,7 @@ const viewAllEvents = (date) => {
   width: 100%;
   max-width: 100%; /* Menghilangkan batasan lebar maksimal */
   align-items: center; /* Menggunakan posisi tengah */
+  animation: slideDown 0.3s ease-out;
 }
 
 /* Day View header revisi */
@@ -872,26 +1042,34 @@ const viewAllEvents = (date) => {
   gap: 12px;
 }
 
+/* Day View List Event Item - menyesuaikan border */
 .list-event-item {
   display: flex;
   background: white;
-  border-radius: 10px;
+  border-radius: 8px; /* Sedikit lebih kecil dari 10px */
   border: 1px solid #e0e0e0;
-  padding: 16px 20px;
+  padding: 14px 18px; /* Sedikit lebih kecil */
   margin-bottom: 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  animation: fadeSlideIn 0.4s ease-out;
+  animation-fill-mode: both;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Sedikit shadow untuk konsistensi */
 }
 
 .list-event-item:hover {
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transform: translateY(-2px);
+  border-color: #dadce0; /* Border sedikit lebih gelap saat hover */
 }
 
+/* Memperbaiki marker warna di list event agar lebih sesuai dengan preview */
 .event-color-marker {
   width: 6px;
+  height: auto; /* Full height */
   border-radius: 3px;
   margin-right: 16px;
+  align-self: stretch; /* Memastikan tinggi penuh */
 }
 
 .event-details {
@@ -953,6 +1131,7 @@ const viewAllEvents = (date) => {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content {
@@ -963,6 +1142,7 @@ const viewAllEvents = (date) => {
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .modal-header {
@@ -1073,5 +1253,214 @@ const viewAllEvents = (date) => {
     height: auto;
     min-height: 1440px;
   }
+}
+
+/* Staggered animation for list items */
+.events-list .list-event-item:nth-child(1) { animation-delay: 0.05s; }
+.events-list .list-event-item:nth-child(2) { animation-delay: 0.1s; }
+.events-list .list-event-item:nth-child(3) { animation-delay: 0.15s; }
+.events-list .list-event-item:nth-child(4) { animation-delay: 0.2s; }
+.events-list .list-event-item:nth-child(5) { animation-delay: 0.25s; }
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalPop {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ===== ANIMATION STYLES ===== */
+
+/* Loading animation */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(26, 115, 232, 0.3);
+  border-radius: 50%;
+  border-top-color: #1a73e8;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Month transition animations */
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.slide-left-enter-from {
+  transform: translateX(30px);
+  opacity: 0;
+}
+
+.slide-left-leave-to {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+.slide-right-enter-from {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+.slide-right-leave-to {
+  transform: translateX(30px);
+  opacity: 0;
+}
+
+/* View transition animations */
+.fade-scale-enter-active,
+.fade-scale-leave-active,
+.zoom-fade-enter-active,
+.zoom-fade-leave-active,
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease-in-out;
+}
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+.zoom-fade-enter-from {
+  opacity: 0;
+  transform: scale(1.05);
+}
+
+.zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.slide-up-enter-from {
+  transform: translateY(30px);
+  opacity: 0;
+}
+
+.slide-up-leave-to {
+  transform: translateY(-30px);
+  opacity: 0;
+}
+
+/* Events list animation */
+.list-animation-enter-active, 
+.list-animation-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-animation-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.list-animation-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Modal animation */
+.modal-fade-enter-active, 
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from, 
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-content {
+  animation: modalPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Event preview hover animation */
+.event-preview {
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-origin: left center;
+}
+
+.event-preview:hover {
+  transform: scale(1.05) translateX(2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  z-index: 5;
+}
+
+/* Today cell pulse effect */
+.day-cell.today {
+  animation: subtle-pulse 2s infinite;
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes subtle-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(26, 115, 232, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(26, 115, 232, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(26, 115, 232, 0); }
+}
+
+@keyframes modalPop {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Special animations for day cells with events */
+.day-cell.has-events {
+  overflow: hidden;
+}
+
+.day-cell.has-events::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4285F4, #EA4335, #FBBC05, #34A853);
+  transform: translateX(-100%);
+  animation: slide-gradient 1.5s ease forwards;
+}
+
+@keyframes slide-gradient {
+  to { transform: translateX(0); }
 }
 </style>

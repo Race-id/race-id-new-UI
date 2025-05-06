@@ -11,6 +11,16 @@ const isLoading = ref(true)
 const error = ref(null)
 const router = useRouter()
 
+// Add header reference
+const headerRef = ref(null)
+
+// Add function to show header (triggered from calendar)
+const showHeader = () => {
+  if (headerRef.value && headerRef.value.showHeader) {
+    headerRef.value.showHeader()
+  }
+}
+
 // Navigation functions
 const goToUpcomingEvents = () => {
   router.push('/upcoming-events')
@@ -133,6 +143,9 @@ const calendarDate = computed(() => {
 
 // Add method to handle date selection
 const handleDateSelect = (data) => {
+  // Show header when selecting a date
+  showHeader()
+  
   // Jangan langsung tutup popup
   if (data && data.date && !isNaN(data.date.getTime())) {
     // Filter races berdasarkan tanggal yang dipilih
@@ -155,6 +168,9 @@ const showCalendar = ref(false)
 
 // Add toggle function
 const toggleCalendar = () => {
+  // Show header when opening calendar
+  showHeader()
+  
   showCalendar.value = !showCalendar.value;
   // Toggle class on body
   if (showCalendar.value) {
@@ -172,7 +188,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Header />
+  <!-- Use the ref attribute to access the Header component -->
+  <Header ref="headerRef" />
+  
   <main class="race-finder">
     <section class="race-finder-container">
       <!-- Search Header with animated classes -->
@@ -305,6 +323,8 @@ onUnmounted(() => {
                       <Calendar 
                         :events="races"
                         @select-date="handleDateSelect"
+                        @show-header="showHeader"
+                        :isInPopup="true"
                       />
                     </div>
                   </div>
@@ -1104,5 +1124,23 @@ body.popup-open {
   .calendar-container {
     padding: 12px;
   }
+}
+
+/* Di race.vue, pastikan header memiliki z-index yang lebih tinggi */
+:deep(header) {
+  z-index: 20;
+}
+
+/* Popup overlay tetap memiliki z-index tertinggi */
+.popup-overlay {
+  position: fixed;
+  z-index: 9999;
+  /* ...existing styles */
+}
+
+/* Calendar popup content */
+.popup-content {
+  z-index: 10000;
+  /* ...existing styles */
 }
 </style>
