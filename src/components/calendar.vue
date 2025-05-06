@@ -17,6 +17,30 @@ const slideDirection = ref('right')
 const isTransitioning = ref(false)
 const viewTransitionName = ref('fade-scale')
 
+// Add prop to identify if calendar is in popup
+const props = defineProps({
+  isInPopup: {
+    type: Boolean,
+    default: false
+  }
+})
+
+// Add scroll detection
+const isHeaderScrolled = ref(false)
+const calendarBodyRef = ref(null)
+
+// Track scroll position
+const handleScroll = () => {
+  if (calendarBodyRef.value) {
+    isHeaderScrolled.value = calendarBodyRef.value.scrollTop > 0
+  }
+}
+
+// Emit event untuk trigger header
+const showMainHeader = () => {
+  emit('show-header');
+}
+
 // Fetch events from API endpoint with loading animation
 const fetchApiEvents = async () => {
   isLoading.value = true
@@ -243,6 +267,9 @@ const isToday = (date) => {
 const previousMonth = () => {
   if (isTransitioning.value) return
   
+  // Show header when navigating
+  showMainHeader()
+  
   slideDirection.value = 'right'
   isTransitioning.value = true
   
@@ -261,6 +288,9 @@ const previousMonth = () => {
 const nextMonth = () => {
   if (isTransitioning.value) return
   
+  // Show header when navigating
+  showMainHeader()
+  
   slideDirection.value = 'left'
   isTransitioning.value = true
   
@@ -278,6 +308,9 @@ const nextMonth = () => {
 
 // Add auto-scroll when switching to day view
 const switchToDayView = (date) => {
+  // Show header when switching views
+  showMainHeader()
+  
   viewTransitionName.value = 'zoom-fade'
   selectedDate.value = date
   
@@ -288,6 +321,9 @@ const switchToDayView = (date) => {
 }
 
 const switchToMonthView = () => {
+  // Show header when switching views
+  showMainHeader()
+  
   viewTransitionName.value = 'slide-up'
   
   setTimeout(() => {
@@ -298,6 +334,9 @@ const switchToMonthView = () => {
 // Update selectDate to use auto-scroll when switching to day view
 const selectDate = (day) => {
   if (!day.isEmpty) {
+    // Show header when selecting a date
+    showMainHeader()
+    
     selectedDate.value = day.date
     const dayEvents = getEventsForDate(day.date)
     emit('select-date', { date: day.date, events: dayEvents })
@@ -325,15 +364,24 @@ const yearOptions = computed(() => {
 
 // Navigation functions
 const updateMonth = () => {
+  // Show header when changing month from dropdown
+  showMainHeader()
+  
   currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value)
 }
 
 const updateYear = () => {
+  // Show header when changing year from dropdown
+  showMainHeader()
+  
   currentDate.value = new Date(selectedYear.value, selectedMonthIndex.value)
 }
 
 // Go to today
 const goToToday = () => {
+  // Show header when going to today
+  showMainHeader()
+  
   const today = new Date()
   
   if (currentView.value === 'month') {
@@ -425,6 +473,9 @@ const isSameDay = (date1, date2) => {
 const previousDay = () => {
   if (!selectedDate.value) return
   
+  // Show header when navigating
+  showMainHeader()
+  
   const prevDay = new Date(selectedDate.value)
   prevDay.setDate(prevDay.getDate() - 1)
   selectedDate.value = prevDay
@@ -433,6 +484,9 @@ const previousDay = () => {
 
 const nextDay = () => {
   if (!selectedDate.value) return
+  
+  // Show header when navigating
+  showMainHeader()
   
   const nextDay = new Date(selectedDate.value)
   nextDay.setDate(nextDay.getDate() + 1)
@@ -493,30 +547,6 @@ const scrollToTop = (delay = 50) => {
       behavior: 'smooth'
     })
   }, delay)
-}
-
-// Add prop to identify if calendar is in popup
-const props = defineProps({
-  isInPopup: {
-    type: Boolean,
-    default: false
-  }
-})
-
-// Add scroll detection
-const isHeaderScrolled = ref(false)
-const calendarBodyRef = ref(null)
-
-// Track scroll position
-const handleScroll = () => {
-  if (calendarBodyRef.value) {
-    isHeaderScrolled.value = calendarBodyRef.value.scrollTop > 0
-  }
-}
-
-// Emit event untuk trigger header
-const showMainHeader = () => {
-  emit('show-header');
 }
 </script>
 
